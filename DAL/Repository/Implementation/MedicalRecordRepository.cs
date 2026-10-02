@@ -76,7 +76,7 @@ public sealed class MedicalRecordRepository(HospitalDbContext context) : IMedica
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (_disposed)
         {

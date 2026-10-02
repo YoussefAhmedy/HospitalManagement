@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +10,7 @@ namespace Hospital.DAL.Entities.OwnedTypes
     {
         Approved = 1,
         NotApproved = 2,
-        Pending = 3
+        Pending = 3,
+        Cancelled = 4
     }
 }

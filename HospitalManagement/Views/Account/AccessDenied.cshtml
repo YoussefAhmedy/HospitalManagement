@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "Access denied";
+    ViewData["BodyClass"] = "auth-page";
+    ViewData["MainClass"] = "auth-main";
+}
+<section class="auth-card" aria-labelledby="denied-heading">
+    <span class="eyebrow">Account permissions</span>
+    <h1 id="denied-heading">Access not available</h1>
+    <p class="auth-card__lead">This account does not have permission to open the requested page.</p>
+    <div class="form-actions">
+        <a class="button button--primary" asp-controller="Home" asp-action="Index">Return home</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a class="button" asp-controller="Account" asp-action="Profile">Account settings</a>
+        }
+        else
+        {
+            <a class="button" asp-controller="Account" asp-action="LogIn">Sign in</a>
+        }
+    </div>
+</section>

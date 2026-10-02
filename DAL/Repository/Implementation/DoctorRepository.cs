@@ -1,4 +1,4 @@
-﻿using Hospital.DAL.DataBase;
+using Hospital.DAL.DataBase;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Repository.Abstraction;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +20,9 @@ namespace Hospital.DAL.Repository.Implementation
         {
             return _context.Doctors.Include(d => d.Specialization).ToList();
         }
+
+        public IQueryable<Doctor> GetPublicDoctors() =>
+            _context.Doctors.AsNoTracking().Where(doctor => doctor.EmailConfirmed);
 
         public async Task<Doctor> GetDoctorById(string id)
         {

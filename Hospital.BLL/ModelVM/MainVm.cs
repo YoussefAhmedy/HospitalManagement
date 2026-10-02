@@ -1,14 +1,6 @@
-﻿using Hospital.DAL.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace Hospital.BLL.ModelVM;
 
-namespace Hospital.BLL.ModelVM
+public sealed class MainVm
 {
-    public class MainVm
-    {
-        public IEnumerable<Doctor>? Doctors { get; set; }
-    }
+    public IReadOnlyList<PublicDoctorVm> Doctors { get; init; } = [];
 }

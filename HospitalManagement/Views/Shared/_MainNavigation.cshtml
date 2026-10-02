@@ -1,0 +1,54 @@
+@using Hospital.BLL.Helpers
+<header class="site-header">
+    <div class="container site-header__inner navbar navbar-expand-lg">
+        <a class="brand" asp-controller="Home" asp-action="Index" aria-label="CareAxis home">
+            <span class="brand__mark" aria-hidden="true">+</span><span>CareAxis</span>
+        </a>
+        <button class="navbar-toggler site-header__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#careaxis-navigation" aria-controls="careaxis-navigation" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse site-header__content" id="careaxis-navigation">
+            <nav class="site-nav" aria-label="Main navigation">
+                @if (User.IsInRole(Role.Patient.ToString()))
+                {
+                    <a asp-controller="Patient" asp-action="Index">Overview</a>
+                    <a asp-controller="Patient" asp-action="AddAppointment">Book a visit</a>
+                    <a asp-controller="Patient" asp-action="ListAppointments">Appointments</a>
+                    <a asp-controller="Patient" asp-action="GetMedicalRecords">My records</a>
+                }
+                else if (User.IsInRole(Role.Doctor.ToString()))
+                {
+                    <a asp-controller="Doctor" asp-action="Index">Overview</a>
+                    <a asp-controller="Doctor" asp-action="GetAppointments">Schedule</a>
+                    <a asp-controller="Doctor" asp-action="GetMedicalRecords">Records</a>
+                }
+                else if (User.IsInRole(Role.Admin.ToString()))
+                {
+                    <a asp-controller="Admin" asp-action="Index">Operations</a>
+                    <a asp-controller="Admin" asp-action="ListDoctors">Clinicians</a>
+                    <a asp-controller="Admin" asp-action="GetPatients">Patients</a>
+                }
+                else
+                {
+                    <a asp-controller="Home" asp-action="Index" asp-fragment="how-it-works">How it works</a>
+                    <a asp-controller="Home" asp-action="Index" asp-fragment="care-team">Care team</a>
+                    <a asp-controller="Home" asp-action="Support">Support</a>
+                }
+            </nav>
+            <div class="site-header__actions">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="button button--quiet" asp-controller="Account" asp-action="Profile">Account</a>
+                    <form asp-controller="Account" asp-action="LogOut" method="post" class="inline-form">
+                        <button class="button button--dark" type="submit">Sign out</button>
+                    </form>
+                }
+                else
+                {
+                    <a class="button button--quiet" asp-controller="Account" asp-action="LogIn">Sign in</a>
+                    <a class="button button--primary" asp-controller="Account" asp-action="Register">Create account</a>
+                }
+            </div>
+        </div>
+    </div>
+</header>

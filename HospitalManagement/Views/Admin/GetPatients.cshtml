@@ -1,163 +1,38 @@
-﻿@model List<PatientVm>
-
+@model List<PatientVm>
 @{
-    Layout = "Admin_Layout";
+    ViewData["Title"] = "Patient accounts";
 }
 
+<section class="container page-header">
+    <div class="page-header__eyebrow">Administration</div>
+    <h1>Patient accounts</h1>
+    <p>Account details are visible only to authorized administrators.</p>
+</section>
 
-@section Style {
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-   @*  <link rel="stylesheet" href="/css/main.css" /> *@
-    <style>
-        .cardalt {
-            background-color: #fff;
-            border: 2px solid #87CEEB;
-            border-radius: 10px;
-            width: 250px;
-            margin: 15px;
-            text-align: center;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: box-shadow 0.3s ease, transform 0.3s ease; /* Added transition */
-        }
-
-        .container {
-            width: 80%;
-            margin: 0 auto;
-        }
-
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .card {
-            background-color: #fff;
-            border: 2px solid #87CEEB;
-            border-radius: 10px;
-            width: 250px;
-            margin: 15px;
-            text-align: center;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: box-shadow 0.3s ease, transform 0.3s ease; /* Added transition */
-        }
-
-            .card:hover {
-                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Increased shadow on hover */
-                transform: translateY(-5px); /* Slightly lift the card on hover */
-            }
-
-            .card img {
-                width: 100%;
-                height: auto;
-                border-radius: 10px;
-            }
-
-            .card h3 {
-                font-size: 20px;
-                margin: 15px 0 5px;
-                color: #333;
-            }
-
-            .card p {
-                font-size: 16px;
-                color: #87CEEB;
-                margin: 0 0 15px;
-            }
-
-            .card .social-icons {
-                display: flex;
-                justify-content: center;
-                gap: 10px;
-            }
-
-                .card .social-icons a {
-                    color: #87CEEB;
-                    font-size: 20px;
-                    text-decoration: none;
-                    border: 2px solid #87CEEB;
-                    border-radius: 50%;
-                    padding: 10px;
-                    transition: background-color 0.3s, color 0.3s;
-                }
-
-                    .card .social-icons a:hover {
-                        background-color: #87CEEB;
-                        color: #fff;
+<section class="container section pt-0" aria-label="Patient account directory">
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state">No patient accounts are available.</div>
+    }
+    else
+    {
+        <div class="data-table-wrap">
+            <table class="table table-hover">
+                <thead><tr><th scope="col">Patient</th><th scope="col">Email</th><th scope="col">Phone</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                <tbody>
+                    @foreach (var patient in Model)
+                    {
+                        var initials = string.Concat(patient.FirstName?.FirstOrDefault(), patient.LastName?.FirstOrDefault()).ToUpperInvariant();
+                        <tr>
+                            <td><div class="table-person"><span class="table-person__avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(initials) ? "PA" : initials)</span><span>@patient.FirstName @patient.LastName</span></div></td>
+                            <td>@patient.Email</td>
+                            <td>@patient.Phone</td>
+                            <td class="text-end"><a class="button button--small" asp-action="GetPatientDetails" asp-controller="Admin" asp-route-id="@patient.Id">Review account</a></td>
+                        </tr>
                     }
-
-
-            .cardalt:hover {
-                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Increased shadow on hover */
-                transform: translateY(-5px); /* Slightly lift the cardalt on hover */
-            }
-
-            .cardalt img {
-                width: 100%;
-                height: auto;
-                border-radius: 10px;
-            }
-
-            .cardalt h3 {
-                font-size: 20px;
-                margin: 15px 0 5px;
-                color: #333;
-            }
-
-            .cardalt p {
-                font-size: 16px;
-                color: #87CEEB;
-                margin: 0 0 15px;
-            }
-
-            .cardalt .social-icons {
-                display: flex;
-                justify-content: center;
-                gap: 10px;
-            }
-
-                .cardalt .social-icons a {
-                    color: #87CEEB;
-                    font-size: 20px;
-                    text-decoration: none;
-                    border: 2px solid #87CEEB;
-                    border-radius: 50%;
-                    padding: 10px;
-                    transition: background-color 0.3s, color 0.3s;
-                }
-
-                    .cardalt .social-icons a:hover {
-                        background-color: #87CEEB;
-                        color: #fff;
-                    }
-
-    </style>
-}
-
-<div class="container">
-@foreach (var pat in Model)
-{
-    
-    <a asp-action="GetPatientDetails" asp-controller="Admin" asp-route-id="@pat.Id" style="text-decoration : none">
-        <div class="cardalt">
-                @{
-                    var image = pat?.Image ?? "default.jpg";
-                }
-                <img alt="Doctor Image" src="/Images/@image" style="height : 150px; width :150px; " />
-            <h3>@pat.FirstName @pat.LastName</h3>
-            <p>@pat.Phone</p>
-            <p>@pat.Email</p>
-            <div class="social-icons">
-                @* <a href="#"><i class="fab fa-facebook-f"></i></a>
-                <a href="#"><i class="fab fa-twitter"></i></a>
-                <a href="#"><i class="fab fa-instagram"></i></a>
-                <a href="#"><i class="fab fa-linkedin-in"></i></a> *@
-            </div>
+                </tbody>
+            </table>
         </div>
-    </a>
-
-}
-</div>
+    }
+    <p class="form-hint mt-3">Handle personal information according to the deployment’s approved access, retention, and privacy procedures.</p>
+</section>

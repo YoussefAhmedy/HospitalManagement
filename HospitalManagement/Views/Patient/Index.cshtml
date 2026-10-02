@@ -1,0 +1,87 @@
+@model PatientDashboardVm
+@{
+    ViewData["Title"] = "Patient overview";
+    var firstName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+}
+
+<section class="container page-header">
+    <div class="page-header__eyebrow">Patient workspace</div>
+    <h1>Welcome@(string.IsNullOrWhiteSpace(firstName) ? string.Empty : $", {firstName}")</h1>
+    <p>Your appointments and authorized records, together in one place.</p>
+</section>
+
+<section class="container dashboard-grid" aria-label="Patient overview">
+    <article class="stat-card dashboard-span-4">
+        <div class="stat-card__label">All appointments</div>
+        <div class="stat-card__value">@Model.TotalAppointments</div>
+    </article>
+    <article class="stat-card dashboard-span-4">
+        <div class="stat-card__label">Upcoming requests and visits</div>
+        <div class="stat-card__value">@Model.UpcomingAppointmentCount</div>
+    </article>
+    <article class="stat-card dashboard-span-4">
+        <div class="stat-card__label">Recent records available</div>
+        <div class="stat-card__value">@Model.RecentRecords.Count</div>
+    </article>
+
+    <div class="dashboard-actions dashboard-span-12">
+        <a class="button button--primary" asp-controller="Patient" asp-action="AddAppointment">Request an appointment <span aria-hidden="true">→</span></a>
+        <a class="button" asp-controller="Patient" asp-action="ListAppointments">View all appointments</a>
+        <a class="button" asp-controller="Patient" asp-action="GetMedicalRecords">Open my records</a>
+    </div>
+
+    <section class="panel-card dashboard-span-7" aria-labelledby="upcoming-heading">
+        <div class="panel-card__heading">
+            <div><h2 id="upcoming-heading">Upcoming appointments</h2><p>Only appointments associated with your account are shown.</p></div>
+            <a asp-controller="Patient" asp-action="ListAppointments">All appointments</a>
+        </div>
+        @if (Model.UpcomingAppointments.Count == 0)
+        {
+            <div class="empty-state">You do not have any upcoming appointments yet. When you submit a request, its status will appear here.</div>
+        }
+        else
+        {
+            <div class="dashboard-list">
+                @foreach (var appointment in Model.UpcomingAppointments)
+                {
+                    var status = appointment.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.NotApproved ? "Declined" : appointment.Status.ToString();
+                    var statusClass = appointment.Status switch
+                    {
+                        Hospital.DAL.Entities.OwnedTypes.AppointStatus.Approved => "status-pill--approved",
+                        Hospital.DAL.Entities.OwnedTypes.AppointStatus.Pending => "status-pill--pending",
+                        Hospital.DAL.Entities.OwnedTypes.AppointStatus.Cancelled => "status-pill--cancelled",
+                        _ => "status-pill--declined"
+                    };
+                    <a class="dashboard-list__item dashboard-list__link" asp-controller="Patient" asp-action="AppointmentDetails" asp-route-id="@appointment.AppointmentID">
+                        <span><strong>@(appointment.Doctor is null ? "Clinician" : $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}")</strong><small>@appointment.AppointmentDate.ToString("ddd, dd MMM yyyy")</small></span>
+                        <span class="status-pill @statusClass">@status</span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="panel-card dashboard-span-5" aria-labelledby="records-heading">
+        <div class="panel-card__heading">
+            <div><h2 id="records-heading">Recent records</h2><p>Your own authorized medical records.</p></div>
+            <a asp-controller="Patient" asp-action="GetMedicalRecords">View records</a>
+        </div>
+        @if (Model.RecentRecords.Count == 0)
+        {
+            <div class="empty-state">No records are available in your account yet.</div>
+        }
+        else
+        {
+            <div class="dashboard-list">
+                @foreach (var record in Model.RecentRecords)
+                {
+                    <div class="dashboard-list__item">
+                        <span><strong>@(record.Doctor is null ? "Care team" : $"Dr. {record.Doctor.FirstName} {record.Doctor.LastName}")</strong><small>Record date: @record.RecordDate.ToString("dd MMM yyyy")</small></span>
+                        <span class="status-pill">Record</span>
+                    </div>
+                }
+            </div>
+        }
+        <p class="form-hint mt-3 mb-0">For urgent symptoms or medical advice, contact a qualified care provider or local emergency services.</p>
+    </section>
+</section>

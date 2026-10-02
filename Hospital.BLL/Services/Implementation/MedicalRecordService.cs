@@ -1,40 +1,21 @@
-﻿using Hospital.BLL.Services.Abstraction;
+using System.Linq.Expressions;
+using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Repository.Abstraction;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Hospital.BLL.Services.Implementation
+namespace Hospital.BLL.Services.Implementation;
+
+public sealed class MedicalRecordService(IMedicalRecordRepository repository) : ImedicalRecordService
 {
-    public class MedicalRecordService : ImedicalRecordService
-    {
-        private readonly IMedicalRecordRepository medicalRecordRepository;
+    public Task<bool> AddMedicalRecord(MedicalRecord record) => repository.AddMedicalRecord(record);
 
-        public MedicalRecordService(IMedicalRecordRepository medicalRecordRepository)
-        {
-            this.medicalRecordRepository = medicalRecordRepository;
-        }
+    public IEnumerable<MedicalRecord> GetDoctorMedicalRecords(Expression<Func<MedicalRecord, bool>> predicate) =>
+        repository.GetDoctorMedicalRecords(predicate);
 
-        public async Task<bool> AddMedicalRecord(MedicalRecord record)
-        {
-            
-             return await medicalRecordRepository.AddMedicalRecord(record);
-            
-            
-        }
+    public IEnumerable<MedicalRecord> GetMedicalRecordsWithPatientAndDoctor() =>
+        repository.GetAllMedicalRecords();
 
-        public IEnumerable<MedicalRecord> GetDoctorMedicalRecords(Expression<Func<MedicalRecord, bool>> predicate)
-        {
-            return medicalRecordRepository.GetDoctorMedicalRecords(predicate);
-        }
+    public IQueryable<MedicalRecord> GetForPatient(string patientId) => repository.GetForPatient(patientId);
 
-        public IEnumerable<MedicalRecord> GetMedicalRecordsWithPatientAndDoctor()
-        {
-            return medicalRecordRepository.GetAllMedicalRecords();   
-        }
-    }
+    public IQueryable<MedicalRecord> GetForDoctor(string doctorId) => repository.GetForDoctor(doctorId);
 }

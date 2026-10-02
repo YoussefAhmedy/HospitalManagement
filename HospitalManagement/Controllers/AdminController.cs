@@ -1,17 +1,15 @@
-﻿using AutoMapper;
+using System.Security.Claims;
+using AutoMapper;
 using Hospital.BLL.Helpers;
 using Hospital.BLL.ModelVM;
+using Hospital.BLL.Notifications;
 using Hospital.DAL.Entities;
+using HospitalManagement.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using NuGet.Protocol.Plugins;
-using System.Net.Mail;
-using System.Text.Encodings.Web;
 using System.Text;
 using Hospital.BLL.Services.Abstraction;
-using Hospital.BLL.Services.Implementation;
-using Org.BouncyCastle.Utilities;
 using Microsoft.AspNetCore.Authorization;
 
 namespace HospitalManagement.Controllers
@@ -20,10 +18,10 @@ namespace HospitalManagement.Controllers
     public class AdminController : Controller
     {
         private readonly IMapper mapper;
-        private readonly IEmailSender sender;
+        private readonly IEmailQueue emailQueue;
+        private readonly IAuditLogger auditLogger;
         private readonly UserManager<ApplicationUser> userManager;
-        private readonly SignInManager<ApplicationUser> signInManager;
-        private readonly ILogger<AccountController> logger;
+        private readonly ILogger<AdminController> logger;
         private readonly ISepcializationService sepcializationService;
         private readonly IDoctorService doctorService;
         private readonly IPatientService patientService;
@@ -32,18 +30,17 @@ namespace HospitalManagement.Controllers
         private readonly IScheduleService scheduleService;
         private readonly IAppointmentService appointmentService;
 
-        public AdminController(IMapper mapper, IEmailSender sender,
-            UserManager<ApplicationUser> userManager, 
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<AccountController> logger, ISepcializationService sepcializationService,
-            IDoctorService doctorService,IPatientService patientService,
-            ImedicalRecordService medicalRecordService, IShiftService shiftService
-            ,IScheduleService scheduleService,IAppointmentService appointmentService)
+        public AdminController(IMapper mapper, IEmailQueue emailQueue, IAuditLogger auditLogger,
+            UserManager<ApplicationUser> userManager,
+            ILogger<AdminController> logger, ISepcializationService sepcializationService,
+            IDoctorService doctorService, IPatientService patientService,
+            ImedicalRecordService medicalRecordService, IShiftService shiftService,
+            IScheduleService scheduleService, IAppointmentService appointmentService)
         {
             this.mapper = mapper;
-            this.sender = sender;
+            this.emailQueue = emailQueue;
+            this.auditLogger = auditLogger;
             this.userManager = userManager;
-            this.signInManager = signInManager;
             this.logger = logger;
             this.sepcializationService = sepcializationService;
             this.doctorService = doctorService;
@@ -55,12 +52,19 @@ namespace HospitalManagement.Controllers
         }
         public IActionResult Index()
         {
-            var model = new AdminIndexVm()
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
+            var model = new AdminIndexVm
             {
                 NoOfPatients = patientService.GetAllPatients().Count(),
-                NoOfAppoint = appointmentService.GetAppointments(ap => ap.AppointmentID > -1).Count(),
-                NoOfNewAppoint = appointmentService.GetAppointments(ap => ap.AppointmentDate.Date > DateTime.Now.Date).Count(),
-                NoOfTodayPatient = appointmentService.GetAppointments(ap => ap.AppointmentDate == DateTime.Now.Date && ap.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.Approved).Count(),
+                NoOfAppoint = appointmentService.GetAppointments(_ => true).Count(),
+                NoOfNewAppoint = appointmentService.GetAppointments(appointment =>
+                    appointment.AppointmentDate >= tomorrow &&
+                    appointment.Status != Hospital.DAL.Entities.OwnedTypes.AppointStatus.Cancelled &&
+                    appointment.Status != Hospital.DAL.Entities.OwnedTypes.AppointStatus.NotApproved).Count(),
+                NoOfTodayPatient = appointmentService.GetAppointments(appointment =>
+                    appointment.AppointmentDate >= today && appointment.AppointmentDate < tomorrow &&
+                    appointment.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.Approved).Count(),
                 NoOfDoctors = doctorService.GetAllDoctors().Count(),
                 NoOfMedical = medicalRecordService.GetMedicalRecordsWithPatientAndDoctor().Count()
             };
@@ -79,67 +83,60 @@ namespace HospitalManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateDoctor(CreateDoctorViewModel registerViewModel)
+        public async Task<IActionResult> CreateDoctor(CreateDoctorViewModel model)
         {
-            registerViewModel.Specializations = sepcializationService.GetSpecializations();
-            if (ModelState.IsValid)
+            model.Specializations = sepcializationService.GetSpecializations();
+            if (!ModelState.IsValid)
             {
-                var user = mapper.Map<Doctor>(registerViewModel);
-                user.Specialization = await sepcializationService.GetSpecialization(registerViewModel.SpecializationId);
-                user.UserName = new MailAddress(registerViewModel.Email).User;
-                var result = await userManager.CreateAsync(user, registerViewModel.Password);
-                if (result.Succeeded)
-                {
-                    logger.LogInformation("created doctor in db");
-                    var assignRoleResult = await userManager.AddToRoleAsync(user, Role.Doctor.ToString());
-                    if (!assignRoleResult.Succeeded)
-                    {
-                        ModelState.AddModelError(string.Empty, "error try again");
+                return View(model);
+            }
 
-                        await userManager.DeleteAsync(user);
-                        
+            var doctor = mapper.Map<Doctor>(model);
+            doctor.Email = model.Email.Trim();
+            doctor.UserName = doctor.Email;
+            doctor.Specialization = await sepcializationService.GetSpecialization(model.SpecializationId);
+            doctor.CreatedAt = DateTime.UtcNow;
 
-                        return View(registerViewModel);
-                    }
-                    var id = await userManager.GetUserIdAsync(user);
-
-                    var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
-                    var confirmresult =  await userManager.ConfirmEmailAsync(user, code);
-                    if (!confirmresult.Succeeded)
-                    {
-                        ModelState.AddModelError(string.Empty, "error try again");
-
-                        await userManager.DeleteAsync(user);
-
-                        return View(registerViewModel);
-                    }
-                    bool sent = await sender.send(user.Email, "Confrim Hospital Registerion",
-                        $"this is your password <p>{registerViewModel.Password}</p>");
-                    if (!sent)
-                    {
-                        ModelState.AddModelError(string.Empty, "Fail to sent the email try again");
-
-                        await userManager.DeleteAsync(user);
-
-                        return View(registerViewModel);
-                    }
-                    ViewBag.Success = "Created !!";
-                    CreateDoctorViewModel createDoctorViewModel = new CreateDoctorViewModel()
-                    {
-                        Specializations = sepcializationService.GetSpecializations()
-                    };
-
-                    return View(createDoctorViewModel);
-                }
-                foreach (var error in result.Errors)
+            var createResult = await userManager.CreateAsync(doctor, model.Password);
+            if (!createResult.Succeeded)
+            {
+                foreach (var error in createResult.Errors)
                 {
                     ModelState.AddModelError(string.Empty, error.Description);
                 }
-
+                return View(model);
             }
-            return View(registerViewModel);
-        }
 
+            var roleResult = await userManager.AddToRoleAsync(doctor, Role.Doctor.ToString());
+            if (!roleResult.Succeeded)
+            {
+                await userManager.DeleteAsync(doctor);
+                logger.LogError("Doctor role assignment failed after account creation.");
+                ModelState.AddModelError(string.Empty, "We could not complete the account setup. Please try again.");
+                return View(model);
+            }
+
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(doctor);
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var confirmationUrl = Url.Action(
+                nameof(AccountController.ConfirmEmail), "Account",
+                new { id = doctor.Id, code = encodedToken }, Request.Scheme);
+            var emailQueued = confirmationUrl is not null && emailQueue.TryEnqueue(
+                doctor.Email!, "Confirm your CareAxis clinician account",
+                EmailTemplates.AccountConfirmation(doctor.FirstName, confirmationUrl));
+
+            await auditLogger.RecordAsync("admin.doctor-created", User.FindFirstValue(ClaimTypes.NameIdentifier),
+                doctor.Id, "user", doctor.Id);
+            logger.LogInformation("A clinician account was created by an administrator.");
+            ViewBag.Success = emailQueued
+                ? "Clinician account created. The clinician must verify their email before signing in."
+                : "Clinician account created, but verification email delivery is not configured. No password was emailed.";
+
+            return View(new CreateDoctorViewModel
+            {
+                Specializations = sepcializationService.GetSpecializations()
+            });
+        }
 
         public IActionResult ListDoctors()
         {
@@ -159,18 +156,24 @@ namespace HospitalManagement.Controllers
             return View(result);
         }
         [HttpDelete]
-        public  async Task<IActionResult> DeleteDoctorAjax(string id)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDoctorAjax(string id)
         {
             var user = await userManager.FindByIdAsync(id);
-            if (user == null)
+            if (user is not Doctor doctor || !await userManager.IsInRoleAsync(doctor, Role.Doctor.ToString()))
             {
-                return NotFound("this doctor does not exist");
+                return NotFound();
             }
-            if(!(await userManager.DeleteAsync(user)).Succeeded)
+
+            var result = await userManager.DeleteAsync(doctor);
+            if (!result.Succeeded)
             {
-                return BadRequest("can not delte this doctor");
+                return BadRequest("The clinician account could not be deleted.");
             }
-            //return RedirectToAction("ListDoctors");
+
+            await auditLogger.RecordAsync("admin.doctor-deleted",
+                User.FindFirstValue(ClaimTypes.NameIdentifier), doctor.Id, "user", doctor.Id);
+            logger.LogInformation("An administrator deleted a clinician account.");
             return Ok(new { redirect = "/Admin/ListDoctors" });
         }
 
@@ -179,24 +182,40 @@ namespace HospitalManagement.Controllers
         public async Task<IActionResult> EditDoctor(string id, DoctorVm doctorVm)
         {
             doctorVm.specializations = sepcializationService.GetSpecializations();
-            if (ModelState.IsValid)
+            if (string.IsNullOrWhiteSpace(id))
             {
-                doctorVm.Id = id;
-                var doc = await doctorService.DoctorByIdAsync(id);
-                doc.FirstName =doctorVm.FirstName;
-                doc.LastName =doctorVm.LastName;
-                doc.Salary = doctorVm.Salary;
-                doc.Specialization = await sepcializationService.GetSpecialization(doctorVm.SpecializationId);
-                
-                var result = await userManager.UpdateAsync(doc);
-                if (result.Succeeded)
-                {
-                    return RedirectToAction("getDoctorDetails", new { id = id });
-                }
-                ModelState.AddModelError(string.Empty, "can not edit this doc try again");
+                return BadRequest();
             }
 
-            return View("getDoctorDetails",doctorVm);
+            if (ModelState.IsValid)
+            {
+                var doctor = await doctorService.DoctorByIdAsync(id);
+                if (doctor is null)
+                {
+                    return NotFound();
+                }
+
+                doctor.FirstName = doctorVm.FirstName.Trim();
+                doctor.LastName = doctorVm.LastName.Trim();
+                doctor.Salary = doctorVm.Salary;
+                doctor.Specialization = await sepcializationService.GetSpecialization(doctorVm.SpecializationId);
+
+                var result = await userManager.UpdateAsync(doctor);
+                if (result.Succeeded)
+                {
+                    await auditLogger.RecordAsync("admin.doctor-updated",
+                        User.FindFirstValue(ClaimTypes.NameIdentifier), doctor.Id, "user", doctor.Id);
+                    return RedirectToAction(nameof(getDoctorDetails), new { id });
+                }
+
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+
+            doctorVm.Id = id;
+            return View("getDoctorDetails", doctorVm);
         }
 
         public IActionResult GetPatients()
@@ -214,7 +233,9 @@ namespace HospitalManagement.Controllers
             
             return View(patients);
         }
-        public async  Task<IActionResult> EditPatient(EditPatientVm vm)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditPatient(EditPatientVm vm)
         {
             if (ModelState.IsValid)
             {
@@ -230,9 +251,14 @@ namespace HospitalManagement.Controllers
                     var result = await userManager.UpdateAsync(patient);
                     if (result.Succeeded)
                     {
-                        return RedirectToAction("GetPatients");
+                        await auditLogger.RecordAsync("admin.patient-updated",
+                            User.FindFirstValue(ClaimTypes.NameIdentifier), patient.Id, "user", patient.Id);
+                        return RedirectToAction(nameof(GetPatients));
                     }
-                    ModelState.AddModelError(string.Empty, "can not update this patient");
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
                 }
                 else
                     ModelState.AddModelError(string.Empty, "this patient does not exist");
@@ -253,20 +279,24 @@ namespace HospitalManagement.Controllers
         }
 
         [HttpDelete]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeletePatient(string email)
         {
-            var patient = await patientService.GetPatient(p => p.Email == email);
-            if (patient == null)
+            var patient = await patientService.GetPatient(patient => patient.Email == email);
+            if (patient is null)
             {
-                return NotFound("there is no patient with that email");
+                return NotFound();
             }
+
             var result = await patientService.Delete(patient);
             if (!result)
             {
-                return BadRequest("can not delete this patient");
+                return BadRequest("The patient account could not be deleted.");
             }
 
-            //return RedirectToAction("GetPatients");
+            await auditLogger.RecordAsync("admin.patient-deleted",
+                User.FindFirstValue(ClaimTypes.NameIdentifier), patient.Id, "user", patient.Id);
+            logger.LogInformation("An administrator deleted a patient account.");
             return Ok(new { redirect = "/Admin/GetPatients" });
         }
 
@@ -278,8 +308,8 @@ namespace HospitalManagement.Controllers
                 Diagnosis = med.Diagnosis,
                 Treatment = med.Treatment,
                 RecordDate = med.RecordDate,
-                PatientName = med.Patient?.FirstName ??"" + " " + med.Patient?.LastName?? "",
-                DoctorName = med.Doctor?.FirstName ?? "" + " " + med.Doctor?.LastName ?? "",
+                PatientName = $"{med.Patient?.FirstName} {med.Patient?.LastName}".Trim(),
+                DoctorName = $"{med.Doctor?.FirstName} {med.Doctor?.LastName}".Trim(),
             }).ToList();
             return View(model);
         }
@@ -306,9 +336,12 @@ namespace HospitalManagement.Controllers
                 var medicalRecord = mapper.Map<MedicalRecord>(addmedicalRecordVM);
                 if (await medicalRecordService.AddMedicalRecord(medicalRecord))
                 {
-                    return RedirectToAction("GetMedicalRecords");
+                    await auditLogger.RecordAsync("admin.medical-record-created",
+                        User.FindFirstValue(ClaimTypes.NameIdentifier), medicalRecord.PatientID,
+                        "medical-record", medicalRecord.MedicalRecordID.ToString());
+                    return RedirectToAction(nameof(GetMedicalRecords));
                 }
-                ModelState.AddModelError(string.Empty, "can not add this record try again ");
+                ModelState.AddModelError(string.Empty, "The record could not be saved. Please try again.");
             }
 
             addmedicalRecordVM.patients = patientService.GetAllPatients();
@@ -366,11 +399,7 @@ namespace HospitalManagement.Controllers
             return View(createScheduleVM);
         }
         [HttpGet]
-
-        public IActionResult CreateShift()
-        {
-            return View();
-        }
+        public IActionResult CreateShift() => View(new CreateShiftVm());
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateShift(CreateShiftVm model)

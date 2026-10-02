@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "Security notes";
+}
+<section class="container legal-copy">
+    <span class="eyebrow">Security notes</span>
+    <h1>Security is a deployment responsibility</h1>
+    <div class="notice-placeholder">The code contains a baseline of security controls, but this page is not a security certification or guarantee. Review, threat-model, test, and operate every deployment.</div>
+
+    <h2>Controls present in this codebase</h2>
+    <ul>
+        <li>Role-based access for patient, clinician, and administrator workspaces, with owner-scoped patient and clinician record queries.</li>
+        <li>ASP.NET Core Identity password policy, lockout, email confirmation, and secure session-cookie settings.</li>
+        <li>Antiforgery validation, request rate limits on selected authentication and search routes, and restrictive response headers.</li>
+        <li>Minimal audit metadata for selected account, appointment, and record events.</li>
+        <li>SQL Server row-version support for appointment concurrency and a readiness check that reports status without connection details.</li>
+        <li>Uploaded profile images are type/signature checked and stored outside the public web directory.</li>
+    </ul>
+
+    <h2>Required deployment work</h2>
+    <p>Production requires secrets from a secret manager or environment, a persistent access-controlled Data Protection key ring, explicit allowed hosts and trusted proxy configuration, secure database credentials, SMTP and OAuth setup only when used, backups with tested restore procedures, monitoring and alerting, patching, incident response, retention policies, and security/privacy/legal review.</p>
+    <p>Backup, monitoring, cloud storage, payment, and external security integrations are not provided by this repository. Email delivery is disabled unless configured. Do not treat health endpoints, audit entries, or these notes as proof that the system is compliant or production-ready.</p>
+</section>

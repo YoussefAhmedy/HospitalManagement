@@ -1,4 +1,4 @@
-﻿using Hospital.DAL.Entities.OwnedTypes;
+using Hospital.DAL.Entities.OwnedTypes;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -33,5 +33,8 @@ namespace Hospital.DAL.Entities
         public string? DoctorID { get; set; }
 
         public Doctor? Doctor { get; set; }
+
+        /// <summary>SQL Server row version used to reject concurrent appointment edits.</summary>
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     }
 }

@@ -1,4 +1,4 @@
-﻿using Hospital.DAL.Entities;
+using Hospital.DAL.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +17,7 @@ namespace Hospital.BLL.Services.Abstraction
         Task<bool> Delete(Patient patient);
 
         IEnumerable<Patient> GetAllPatients();
+        IQueryable<Patient> GetPatientsByIds(IReadOnlyCollection<string> patientIds);
         IEnumerable<Patient> GetPatients(Func<Patient, bool> predicate);
         Task<bool> UpdatePatient(Patient patient);
         Task<Patient> GetPatient(Expression<Func<Patient, bool>> expression);

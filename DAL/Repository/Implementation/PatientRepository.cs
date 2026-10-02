@@ -1,4 +1,4 @@
-﻿using Hospital.DAL.DataBase;
+using Hospital.DAL.DataBase;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Repository.Abstraction;
 
@@ -20,7 +20,12 @@ namespace Hospital.DAL.Repository.Implementation
 
         public List<Patient> GetAllPatients()
         {
-            return _context.Patients.ToList();
+            return _context.Patients.AsNoTracking().ToList();
+        }
+
+        public IQueryable<Patient> GetPatientsByIds(IReadOnlyCollection<string> patientIds)
+        {
+            return _context.Patients.AsNoTracking().Where(patient => patientIds.Contains(patient.Id));
         }
 
         public async Task<Patient> GetPatientById(string id)

@@ -1,14 +1,31 @@
-﻿@{
-    ViewData["Title"] = "Registered";
-    Layout = "_RegisterLayout"; // Ensure this is your updated layout file
+@model ForgetPasswordVM
+@{
+    ViewData["Title"] = "Verify your account";
+    ViewData["BodyClass"] = "auth-page";
+    ViewData["MainClass"] = "auth-main";
 }
 
+<section class="auth-card" aria-labelledby="registered-heading">
+    <span class="eyebrow">One more step</span>
+    <h1 id="registered-heading">Check your email</h1>
+    <p class="auth-card__lead">@((TempData["RegistrationNotice"] as string) ?? "If an account was just created, check the address used during registration for a verification link.")</p>
 
-    <div class="container">
-        <h2>Registration Successful</h2>
-        <p>Please check your email to confirm your account.</p>
-        <a class="link" asp-action="LogIn" asp-controller="Account">Return to Login</a>
+    <div class="notice-placeholder mb-4">
+        Sign-in remains unavailable until the email address is verified. If email delivery is not configured, contact the deployment administrator; no verification link is displayed in the browser.
     </div>
-@section Style {
-    <link rel="stylesheet" href="/css/confirmation.css">
+
+    <form asp-action="ResendConfirmation" asp-controller="Account" method="post">
+        <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+        <div class="mb-3">
+            <label class="form-label" asp-for="Email"></label>
+            <input class="form-control" asp-for="Email" type="email" autocomplete="email" inputmode="email" />
+            <span asp-validation-for="Email" class="field-validation-error"></span>
+        </div>
+        <button class="button button--primary" type="submit">Resend verification email</button>
+    </form>
+    <div class="auth-card__footer"><a asp-controller="Account" asp-action="LogIn">Return to sign in</a></div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 }

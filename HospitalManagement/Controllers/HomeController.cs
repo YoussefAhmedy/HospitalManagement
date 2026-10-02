@@ -1,43 +1,59 @@
-
+using System.Diagnostics;
 using Hospital.BLL.Helpers;
 using Hospital.BLL.ModelVM;
 using Hospital.BLL.Services.Abstraction;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 
-namespace HospitalManagement.Controllers
+namespace HospitalManagement.Controllers;
+
+public sealed class HomeController : Controller
 {
-    public class HomeController : Controller
+    private readonly ILogger<HomeController> _logger;
+    private readonly IDoctorService _doctorService;
+
+    public HomeController(ILogger<HomeController> logger, IDoctorService doctorService)
     {
-        private readonly ILogger<HomeController> _logger;
-        private readonly IDoctorService doctorService;
+        _logger = logger;
+        _doctorService = doctorService;
+    }
 
-        public HomeController(ILogger<HomeController> logger, IDoctorService doctorService)
+    [HttpGet]
+    public IActionResult Index()
+    {
+        if (User.IsInRole(Role.Admin.ToString()))
         {
-            _logger = logger;
-            this.doctorService = doctorService;
+            return RedirectToAction("Index", "Admin");
         }
 
-        public IActionResult Index()
+        return View(new MainVm
         {
-            if (User.IsInRole(Role.Admin.ToString()))
-            {
-                return RedirectToAction("Index", "Admin");
-            }
-            MainVm vm = new MainVm()
-            {
-                Doctors = doctorService.GetAllDoctors()
-            };
+            Doctors = _doctorService.GetPublicDoctorProfiles(maximumResults: 6)
+        });
+    }
 
-            return View(vm);
-        }
-        
-        public IActionResult AboutUs()
-        {
-            return View();
-        }
+    [HttpGet]
+    public IActionResult AboutUs() => RedirectToAction(nameof(Index));
 
+    [HttpGet]
+    public IActionResult Privacy() => View();
 
-        
+    [HttpGet]
+    public IActionResult Terms() => View();
+
+    [HttpGet]
+    public IActionResult Security() => View();
+
+    [HttpGet]
+    public IActionResult Support() => View();
+
+    [HttpGet]
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        var requestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+        ViewData["RequestId"] = requestId;
+        _logger.LogWarning("An unhandled request reached the error page. Trace identifier: {TraceIdentifier}", requestId);
+        Response.StatusCode = StatusCodes.Status500InternalServerError;
+        return View();
     }
 }

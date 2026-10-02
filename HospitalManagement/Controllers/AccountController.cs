@@ -1,465 +1,688 @@
-﻿using AutoMapper;
-using Hospital.BLL.Helpers;
-using Hospital.BLL.ModelVM;
-using Hospital.BLL.Services.Abstraction;
-using Hospital.DAL.Entities;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.DotNet.Scaffolding.Shared;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
-using NuGet.Packaging;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Encodings.Web;
-using static Org.BouncyCastle.Crypto.Engines.SM2Engine;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using AutoMapper;
+using Hospital.BLL.Helpers;
+using Hospital.BLL.ModelVM;
+using Hospital.BLL.Notifications;
+using Hospital.BLL.Services.Abstraction;
+using Hospital.DAL.Entities;
+using HospitalManagement.Infrastructure;
+using HospitalManagement.Services;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.WebUtilities;
 
-namespace HospitalManagement.Controllers
+namespace HospitalManagement.Controllers;
+
+public sealed class AccountController : Controller
 {
-    
-    public class AccountController : Controller
+    private readonly IMapper _mapper;
+    private readonly IEmailQueue _emailQueue;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly ILogger<AccountController> _logger;
+    private readonly IAuditLogger _auditLogger;
+    private readonly IProfileImageStorage _profileImages;
+    private readonly IWebHostEnvironment _environment;
+
+    public AccountController(
+        IMapper mapper,
+        IEmailQueue emailQueue,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        ILogger<AccountController> logger,
+        IAuditLogger auditLogger,
+        IProfileImageStorage profileImages,
+        IWebHostEnvironment environment)
     {
-        private readonly IMapper mapper;
-        private readonly IEmailSender sender;
-        private readonly UserManager<ApplicationUser> userManager;
-        private readonly SignInManager<ApplicationUser> signInManager;
-        private readonly ILogger<AccountController> logger;
+        _mapper = mapper;
+        _emailQueue = emailQueue;
+        _userManager = userManager;
+        _signInManager = signInManager;
+        _logger = logger;
+        _auditLogger = auditLogger;
+        _profileImages = profileImages;
+        _environment = environment;
+    }
 
-        public AccountController(IMapper mapper, IEmailSender sender, 
-            UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ILogger<AccountController> logger) 
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> Register()
+    {
+        var model = new RegisterViewModel
         {
-            this.mapper = mapper;
-            this.sender = sender;
-            this.userManager = userManager;
-            this.signInManager = signInManager;
-            this.logger = logger;
-        }
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> Register()
+            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList()
+        };
+        return View(model);
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> Register(RegisterViewModel model)
+    {
+        if (!ModelState.IsValid)
         {
-            RegisterViewModel vm = new RegisterViewModel()
-            {
-                ExternalLogins = (await signInManager.GetExternalAuthenticationSchemesAsync()).ToList(),
-            };
-            return View(vm);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel registerViewModel)
-        {
-
-            if (ModelState.IsValid) 
-            {
-                var user = mapper.Map<Patient>(registerViewModel);
-                user.UserName = new MailAddress(registerViewModel.Email).User;
-                var result = await userManager.CreateAsync(user, registerViewModel.Password);
-                if (result.Succeeded)
-                {
-                    logger.LogInformation("created user in db");
-                    var assignRoleResult = await userManager.AddToRoleAsync(user,Role.Patient.ToString());
-                    if(!assignRoleResult.Succeeded)
-                    {
-                        ModelState.AddModelError(string.Empty, "error try again");
-
-                        await userManager.DeleteAsync(user);
-
-                        return View(registerViewModel);
-                    }
-                    var id = await userManager.GetUserIdAsync(user);
-                    var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callBackAction = Url.Action(new Microsoft.AspNetCore.Mvc.Routing.UrlActionContext()
-                    {
-                        Action = "ConfirmEmail",
-                        Controller = "Account",
-                        Values = new { id = id, code =code },
-                        //Host = Request.Host.Value,
-                        Protocol = Request.Scheme,
-                        
-
-                    });
-                    bool sent =  await sender.send(user.Email, "Confrim Hospital Registerion",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callBackAction)}'>clicking here</a>.");
-                    if (!sent)
-                    {
-                        ModelState.AddModelError(string.Empty, "Fail to sent the email try again");
-                        
-                        await userManager.DeleteAsync(user);
-                            
-                        return View(registerViewModel);
-                    } 
-                    return RedirectToAction("Registered");
-                }
-                foreach (var error in result.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
-
-            }
-
-
-            return View(registerViewModel);
-        }
-
-        [HttpGet]
-        public IActionResult Registered()
-        {
-            return View();
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> ConfirmEmail(string? id, string? code)
-        {
-            if (id == null || code == null)
-            {
-                return RedirectToAction("Index","Home");
-            }
-
-            var user = await userManager.FindByIdAsync(id);
-            if (user == null)
-            {
-                return NotFound($"Unable to load user with ID '{id}'.");
-            }
-
-            code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
-            var result = await userManager.ConfirmEmailAsync(user, code);
-            if (!result.Succeeded)
-            {
-                return NotFound($"Unable to confrim '{id}'.");
-            }
-
-            return RedirectToAction("LogIn");
-
-        }
-        [HttpGet]
-        public IActionResult LogIn(string? returnUrl)
-        {
-            var model = new LogInViewModel()
-            {
-                ReturnUrl = returnUrl
-            };
+            model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             return View(model);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> LogIn(LogInViewModel viewModel)
-        {
-            if (ModelState.IsValid)
-            {
-                var result = await signInManager.PasswordSignInAsync(new MailAddress(viewModel.Email).User,
-                    viewModel.Password, viewModel.RememberMe, lockoutOnFailure: false);
-                
-                if (result.Succeeded)
-                {
-                    logger.LogInformation("User logged in.");
-                    
-                    if (viewModel.ReturnUrl != null)
-                        return LocalRedirect(viewModel.ReturnUrl);
-                    //if (User.IsInRole("Patient"))
-                    //    return RedirectToAction("Index", "Patient");
-                    //if (User.IsInRole("Doctor"))
-                    //    return RedirectToAction("Index", "Doctor");
-                    return RedirectToAction("Index","Home");
-                }
-                ModelState.AddModelError("", " Email or passowrd wrong try again");
+        var email = model.Email.Trim();
+        var patient = _mapper.Map<Patient>(model);
+        patient.Email = email;
+        patient.UserName = email;
+        patient.CreatedAt = DateTime.UtcNow;
 
+        var createResult = await _userManager.CreateAsync(patient, model.Password);
+        if (!createResult.Succeeded)
+        {
+            AddIdentityErrors(createResult);
+            model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            return View(model);
+        }
+
+        var roleResult = await _userManager.AddToRoleAsync(patient, Role.Patient.ToString());
+        if (!roleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(patient);
+            _logger.LogError("Patient role assignment failed after account creation.");
+            ModelState.AddModelError(string.Empty, "We could not complete registration. Please try again.");
+            model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            return View(model);
+        }
+
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(patient);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        var confirmationUrl = Url.Action(
+            nameof(ConfirmEmail), "Account", new { id = patient.Id, code = encodedToken }, Request.Scheme);
+        var queued = confirmationUrl is not null && _emailQueue.TryEnqueue(
+            email,
+            "Confirm your CareAxis account",
+            EmailTemplates.AccountConfirmation(patient.FirstName, confirmationUrl));
+
+        TempData["RegistrationNotice"] = queued
+            ? "Your account is ready. Check your email for a verification link; sign-in is enabled after verification."
+            : "Your account was created, but email delivery is not configured right now. Contact your deployment administrator to complete verification.";
+        TempData["RegistrationEmail"] = email;
+
+        _logger.LogInformation("A patient account was created; verification is pending.");
+        return RedirectToAction(nameof(Registered));
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult Registered() => View(new ForgetPasswordVM
+    {
+        Email = TempData["RegistrationEmail"] as string ?? string.Empty
+    });
+
+    [HttpGet]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> ConfirmEmail(string? id, string? code)
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(code))
+        {
+            return BadRequest();
+        }
+
+        ApplicationUser? user = await _userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        string decodedToken;
+        try
+        {
+            decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+        }
+        catch (FormatException)
+        {
+            return BadRequest();
+        }
+
+        var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
+        if (!result.Succeeded)
+        {
+            return View("ConfirmationFailed");
+        }
+
+        await _auditLogger.RecordAsync("account.email-confirmed", user.Id, user.Id, "user", user.Id);
+        TempData["StatusMessage"] = "Your email is verified. You can now sign in.";
+        return RedirectToAction(nameof(LogIn));
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> ResendConfirmation(ForgetPasswordVM model)
+    {
+        if (ModelState.IsValid)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email.Trim());
+            if (user is not null && !user.EmailConfirmed)
+            {
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+                var url = Url.Action(nameof(ConfirmEmail), "Account", new { id = user.Id, code = encodedToken }, Request.Scheme);
+                if (url is not null)
+                {
+                    _emailQueue.TryEnqueue(user.Email!, "Confirm your CareAxis account",
+                        EmailTemplates.AccountConfirmation(user.FirstName, url));
+                }
+            }
+        }
+
+        TempData["RegistrationNotice"] = "If verification is available for that account, a new link will be sent shortly.";
+        TempData["RegistrationEmail"] = model.Email?.Trim() ?? string.Empty;
+        return RedirectToAction(nameof(Registered));
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> LogIn(string? returnUrl)
+    {
+        var model = new LogInViewModel { ReturnUrl = returnUrl };
+        model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        return View(model);
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> LogIn(LogInViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            return View(model);
+        }
+
+        var user = await _userManager.FindByEmailAsync(model.Email.Trim());
+        var result = user is null
+            ? Microsoft.AspNetCore.Identity.SignInResult.Failed
+            : await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: true);
+
+        if (result.Succeeded && user is not null)
+        {
+            await _auditLogger.RecordAsync("auth.login-succeeded", user.Id, user.Id, "user", user.Id);
+            _logger.LogInformation("Authentication succeeded.");
+
+            if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+            {
+                return LocalRedirect(model.ReturnUrl);
             }
 
-            return View("LogIn", viewModel);
-
+            return await RedirectToRoleHomeAsync(user);
         }
-        [HttpGet]
-        public async  Task<IActionResult> GoogleAuth(string? returnUrl)
+
+        await _auditLogger.RecordAsync(
+            result.IsLockedOut ? "auth.login-locked" : "auth.login-failed",
+            user?.Id,
+            user?.Id,
+            user is null ? null : "user",
+            user?.Id);
+        ModelState.AddModelError(string.Empty, "Email or password was not accepted. Check your details and try again.");
+        model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        return View(model);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> GoogleAuth(string? returnUrl)
+    {
+        var googleIsConfigured = (await _signInManager.GetExternalAuthenticationSchemesAsync())
+            .Any(scheme => scheme.Name == GoogleDefaults.AuthenticationScheme);
+        if (!googleIsConfigured)
         {
-             var provider = (await signInManager.GetExternalAuthenticationSchemesAsync()).FirstOrDefault(x => x.Name == GoogleDefaults.DisplayName);
-            return RedirectToAction("ExtrenalAuth", new {returnUrl = returnUrl, provider = provider.Name });
-        }
-        [HttpGet]
-        public IActionResult ExtrenalAuth(string? returnUrl, string provider)
-            {
-            
-            var redirectUrl = Url.Action(action: "ExternalLoginCallback", controller: "Account", values: new { ReturnUrl = returnUrl }, Request.Scheme);
-            //var redirectUrl = Url.Action(action: "LogIn", controller: "Account");
-            // Configure the redirect URL, provider and other properties
-            var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
-            //This will redirect the user to the external provider's login page
-            return new ChallengeResult(provider,properties);
+            TempData["StatusMessage"] = "Google sign-in is not configured for this deployment.";
+            return RedirectToAction(nameof(LogIn), new { returnUrl });
         }
 
-
-        [HttpGet]
-
-        [AllowAnonymous]
-        public async Task<IActionResult> ExternalLoginCallback(string? returnUrl, string? remoteError)
+        var safeReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
+        return RedirectToAction(nameof(ExternalAuth), new
         {
-            LogInViewModel loginViewModel = new LogInViewModel
-            {
-                ReturnUrl = returnUrl,
+            returnUrl = safeReturnUrl,
+            provider = GoogleDefaults.AuthenticationScheme
+        });
+    }
 
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> ExternalAuth(string? returnUrl, string? provider)
+    {
+        var providerIsEnabled = (await _signInManager.GetExternalAuthenticationSchemesAsync())
+            .Any(scheme => scheme.Name == provider);
+        if (!providerIsEnabled || string.IsNullOrWhiteSpace(provider))
+        {
+            return BadRequest();
+        }
+
+        var safeReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
+        var callbackUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { returnUrl = safeReturnUrl }, Request.Scheme);
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, callbackUrl);
+        return new ChallengeResult(provider, properties);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> ExternalLoginCallback(string? returnUrl, string? remoteError)
+    {
+        if (!string.IsNullOrWhiteSpace(remoteError))
+        {
+            _logger.LogWarning("External authentication provider returned an error.");
+            TempData["StatusMessage"] = "External sign-in could not be completed. Please try again.";
+            return RedirectToAction(nameof(LogIn));
+        }
+
+        var externalInfo = await _signInManager.GetExternalLoginInfoAsync();
+        if (externalInfo is null)
+        {
+            TempData["StatusMessage"] = "External sign-in could not be completed. Please try again.";
+            return RedirectToAction(nameof(LogIn));
+        }
+
+        var signIn = await _signInManager.ExternalLoginSignInAsync(
+            externalInfo.LoginProvider, externalInfo.ProviderKey, isPersistent: false, bypassTwoFactor: false);
+        if (signIn.Succeeded)
+        {
+            var externalUser = await _userManager.FindByLoginAsync(externalInfo.LoginProvider, externalInfo.ProviderKey);
+            if (externalUser is not null)
+            {
+                await _auditLogger.RecordAsync("auth.external-login-succeeded", externalUser.Id, externalUser.Id, "user", externalUser.Id);
+            }
+            return SafeLocalRedirect(returnUrl);
+        }
+
+        var email = externalInfo.Principal.FindFirstValue(ClaimTypes.Email);
+        var verified = string.Equals(
+            externalInfo.Principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase);
+        if (!verified || string.IsNullOrWhiteSpace(email) || !MailAddress.TryCreate(email, out _))
+        {
+            TempData["StatusMessage"] = "This provider did not verify an email address for the account.";
+            return RedirectToAction(nameof(LogIn));
+        }
+
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            user = new Patient
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                FirstName = externalInfo.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "Patient",
+                LastName = externalInfo.Principal.FindFirstValue(ClaimTypes.Surname) ?? "",
+                CreatedAt = DateTime.UtcNow
             };
-            if (remoteError != null)
-            {
 
-                ModelState.AddModelError(string.Empty, $"Error Form google {remoteError}");
-                return RedirectToAction("LogIn", loginViewModel);
+            var createResult = await _userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+            {
+                _logger.LogWarning("External sign-in account creation failed.");
+                TempData["StatusMessage"] = "External sign-in could not be completed. Please try again.";
+                return RedirectToAction(nameof(LogIn));
             }
-            var info = await signInManager.GetExternalLoginInfoAsync();
-            if (info == null)
+
+            var roleResult = await _userManager.AddToRoleAsync(user, Role.Patient.ToString());
+            if (!roleResult.Succeeded)
             {
-                ModelState.AddModelError(string.Empty, "Error loading external login information.");
-                return View("LogIn", loginViewModel);
+                await _userManager.DeleteAsync(user);
+                _logger.LogError("Patient role assignment failed after external account creation.");
+                TempData["StatusMessage"] = "External sign-in could not be completed. Please try again.";
+                return RedirectToAction(nameof(LogIn));
             }
-            //    var signInResult = await signInManager.ExternalLoginSignInAsync(info.LoginProvider,
-            //info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
-            var signInResult = await signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
-            if (signInResult.Succeeded)
+        }
+        else if (!await _userManager.IsInRoleAsync(user, Role.Patient.ToString()))
+        {
+            // Do not attach public social identities to staff or administrator accounts.
+            TempData["StatusMessage"] = "This account cannot be linked through public sign-in.";
+            return RedirectToAction(nameof(LogIn));
+        }
+
+        if (!await _userManager.IsEmailConfirmedAsync(user))
+        {
+            user.EmailConfirmed = true;
+            var confirmationResult = await _userManager.UpdateAsync(user);
+            if (!confirmationResult.Succeeded)
             {
-                
-                return LocalRedirect(returnUrl ?? "/Home/Index");
-            }
-            else
-            {
-                // Get the email claim value
-                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-                if (email != null)
-                {
-                    // Create a new user without password if we do not have a user already
-                    var user = await userManager.FindByEmailAsync(email);
-                    if (user == null)
-                    {
-                        user = new Patient
-                        {
-                            UserName = new MailAddress(info.Principal.FindFirstValue(ClaimTypes.Email)).User,
-                            Email = info.Principal.FindFirstValue(ClaimTypes.Email),
-                            FirstName = info.Principal.FindFirstValue(ClaimTypes.GivenName)??"Notfound name",
-                            LastName = info.Principal.FindFirstValue(ClaimTypes.Surname)?? "NotFound Name",
-                            PhoneNumber = info.Principal.FindFirstValue(ClaimTypes.MobilePhone)
-
-                        };
-                        //This will create a new user into the AspNetUsers table without password
-                        await userManager.CreateAsync(user);
-                        await userManager.AddToRoleAsync(user,Role.Patient.ToString());
-                        
-                    }
-                    // Add a login (i.e., insert a row for the user in AspNetUserLogins table)
-                    await userManager.AddLoginAsync(user, info);
-                    //Then Signin the User
-                    await signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl??"/Home/Index");
-                }
-
-                ModelState.AddModelError(string.Empty, "Error loading external login information.");
-                return View("LogIn", loginViewModel);
-
+                TempData["StatusMessage"] = "External sign-in could not be completed. Please try again.";
+                return RedirectToAction(nameof(LogIn));
             }
         }
 
-        [HttpGet]
-        public IActionResult ForgetPassword()
+        var linkResult = await _userManager.AddLoginAsync(user, externalInfo);
+        if (!linkResult.Succeeded)
         {
-            return View();
+            _logger.LogWarning("External account linking failed.");
+            TempData["StatusMessage"] = "External sign-in could not be completed. Please try again.";
+            return RedirectToAction(nameof(LogIn));
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ForgetPassword(ForgetPasswordVM forgetPasswordVM)
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        await _auditLogger.RecordAsync("auth.external-account-created", user.Id, user.Id, "user", user.Id);
+        return SafeLocalRedirect(returnUrl);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult ForgetPassword() => View(new ForgetPasswordVM { Email = string.Empty });
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> ForgetPassword(ForgetPasswordVM model)
+    {
+        if (ModelState.IsValid)
         {
-            if (ModelState.IsValid) 
+            await QueuePasswordResetAsync(model.Email.Trim());
+        }
+
+        TempData["PasswordResetNotice"] = "If an eligible account exists for that address, password reset instructions will be sent shortly.";
+        return RedirectToAction(nameof(ResetConfirmation));
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> ResendPasswordReset(ForgetPasswordVM model)
+    {
+        if (ModelState.IsValid)
+        {
+            await QueuePasswordResetAsync(model.Email.Trim());
+        }
+
+        TempData["PasswordResetNotice"] = "If an eligible account exists for that address, password reset instructions will be sent shortly.";
+        return RedirectToAction(nameof(ResetConfirmation));
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult ResetConfirmation() => View(new ForgetPasswordVM { Email = string.Empty });
+
+    [HttpGet]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public IActionResult ResetPassword(string? code, string? email)
+    {
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest();
+        }
+
+        return View(new ResetPasswordVM { Code = code, Email = email });
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordVM model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _userManager.FindByEmailAsync(model.Email.Trim());
+        if (user is null)
+        {
+            return RedirectToAction(nameof(ResetConfirmation));
+        }
+
+        string decodedToken;
+        try
+        {
+            decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(model.Code));
+        }
+        catch (FormatException)
+        {
+            ModelState.AddModelError(string.Empty, "This reset link is invalid or expired. Request a new one.");
+            return View(model);
+        }
+
+        var result = await _userManager.ResetPasswordAsync(user, decodedToken, model.Password);
+        if (!result.Succeeded)
+        {
+            ModelState.AddModelError(string.Empty, "This reset link is invalid or expired. Request a new one.");
+            return View(model);
+        }
+
+        await _userManager.UpdateSecurityStampAsync(user);
+        await _auditLogger.RecordAsync("auth.password-reset", user.Id, user.Id, "user", user.Id);
+        TempData["StatusMessage"] = "Your password was updated. Sign in with your new password.";
+        return RedirectToAction(nameof(LogIn));
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> LogOut()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            await _auditLogger.RecordAsync("auth.logout", userId, userId, "user", userId);
+        }
+
+        await _signInManager.SignOutAsync();
+        return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Profile()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Challenge();
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return View(_mapper.Map<EditProfileVm>(user));
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> EditProfile(EditProfileVm model, IFormFile? imageFile, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Challenge();
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View("Profile", model);
+        }
+
+        if (imageFile is not null && imageFile.Length > 0)
+        {
+            var storedImage = await _profileImages.SaveAsync(imageFile, cancellationToken);
+            if (storedImage is null)
             {
-                var user = await userManager.FindByEmailAsync(forgetPasswordVM.Email);
-                if(user != null && await userManager.IsEmailConfirmedAsync(user))
-                {
-                    var code = await userManager.GeneratePasswordResetTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callBackAction = Url.Action(new Microsoft.AspNetCore.Mvc.Routing.UrlActionContext()
-                    {
-                        Action = "ResetPassword",
-                        Controller = "Account",
-                        Values = new { code =  code,email = forgetPasswordVM.Email },
-                        //Host = Request.Host.Value,
-                        Protocol = Request.Scheme,
-
-
-                    });
-                    bool sent = await sender.send(user.Email, "reset  Hospital password",
-                        $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callBackAction)}'>clicking here</a>.");
-                    return RedirectToAction("ResetConfirmation", new {email = user.Email,code = code});
-                }
-                ModelState.AddModelError(string.Empty, "not found user");
+                ModelState.AddModelError(nameof(imageFile), "Choose a valid JPG, PNG, or WebP image no larger than 5 MB.");
+                return View("Profile", model);
             }
-            return View(forgetPasswordVM);
-        }
-        
-        public IActionResult ResetConfirmation(string? email,string? code)
-        {
-            ViewBag.Email = email;
-            ViewBag.code = code;
-            return View();
+            user.Image = storedImage.FileName;
         }
 
-        [HttpGet]
-        public async  Task<IActionResult> ResendEmail(string email,string code)
+        user.FirstName = model.FirstName.Trim();
+        user.LastName = model.LastName.Trim();
+        user.PhoneNumber = model.PhoneNumber?.Trim();
+        user.DateOfBirth = model.DateOfBirth;
+        user.Gender = model.Gender;
+
+        if (!string.Equals(model.Email?.Trim(), user.Email, StringComparison.OrdinalIgnoreCase))
         {
-            var callBackAction = Url.Action(new Microsoft.AspNetCore.Mvc.Routing.UrlActionContext()
+            var requestedEmail = model.Email.Trim();
+            var existingUser = await _userManager.FindByEmailAsync(requestedEmail);
+            if (existingUser is not null && existingUser.Id != user.Id)
             {
-                Action = "ResetPassword",
-                Controller = "Account",
-                Values = new { code = code, email = email},
-                //Host = Request.Host.Value,
-                Protocol = Request.Scheme,
-
-
-            });
-            bool sent = await sender.send(email, "reset  Hospital password",
-                $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callBackAction)}'>clicking here</a>.");
-
-            return RedirectToAction("ResetConfirmation", new { code = code, email = email });
-        }
-
-        [HttpGet]
-        public  IActionResult ResetPassword(string? code,string? email)
-        {
-            if(code == null || email == null)
-                return BadRequest("A code must be supplied for password reset.");
-            ResetPasswordVM resetPasswordVM = new ResetPasswordVM()
-            {
-                Code = code,
-                Email = email
-            };
-
-            return View(resetPasswordVM);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResetPassword(ResetPasswordVM resetPasswordVM)
-        {
-            if (ModelState.IsValid)
-            {
-                var user = await userManager.FindByEmailAsync(resetPasswordVM.Email);
-                if (user != null)
-                {
-                    resetPasswordVM.Code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(resetPasswordVM.Code));
-                    var result = await userManager.ResetPasswordAsync(user, resetPasswordVM.Code, resetPasswordVM.Password);
-                    if (result.Succeeded)
-                    {
-                        return RedirectToAction("LogIn");
-                    }
-                    else
-                        ModelState.AddModelError(string.Empty, "fail to reset click resent email");
-                }
-                else
-                    return RedirectToAction("ForgetPassword", "Account");
+                ModelState.AddModelError(nameof(model.Email), "That email address is already in use.");
+                return View("Profile", model);
             }
 
-            return View(resetPasswordVM);
-        }
-        [HttpGet]
-        public async Task<IActionResult> LogOut()
-        {
-            if(User?.Identity?.IsAuthenticated?? false)
+            var changeToken = await _userManager.GenerateChangeEmailTokenAsync(user, requestedEmail);
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(changeToken));
+            var confirmationUrl = Url.Action(
+                nameof(ConfirmEmailChange), "Account",
+                new { newEmail = requestedEmail, code = encodedToken }, Request.Scheme);
+            if (confirmationUrl is not null)
             {
-                await signInManager.SignOutAsync();
+                var queued = _emailQueue.TryEnqueue(requestedEmail, "Confirm your new CareAxis email",
+                    EmailTemplates.EmailChangeConfirmation(user.FirstName, confirmationUrl));
+                TempData["StatusMessage"] = queued
+                    ? "Profile saved. Confirm the new email address using the message sent to it."
+                    : "Profile saved, but email delivery is not configured. The email address was not changed.";
             }
-
-            return RedirectToAction("Index", "Home");
         }
 
-        [HttpGet]
-        [Authorize]
-        public IActionResult Profile()
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
         {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?? "";
-            if(id == "")
-                return RedirectToAction("Index", "Home");
-            
-            var user = userManager.Users.FirstOrDefault(u => u.Id == id);
-            if (user == null)
-                return RedirectToAction("Index", "Home");
-            var viewModel = mapper.Map<EditProfileVm>(user);
-
-
-            return View(viewModel);
+            AddIdentityErrors(result);
+            return View("Profile", _mapper.Map<EditProfileVm>(user));
         }
-        [Authorize]
-        [HttpPost]
-        public async Task<IActionResult> EditRofile(string oldemail,IFormFile? ImageFile, EditProfileVm model)
+
+        await _signInManager.RefreshSignInAsync(user);
+        await _auditLogger.RecordAsync("account.profile-updated", user.Id, user.Id, "user", user.Id, cancellationToken);
+        TempData["StatusMessage"] ??= "Your profile was updated.";
+        return RedirectToAction(nameof(Profile));
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> ProfileImage()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is not null && _profileImages.TryResolve(user.Image, out var image) && image is not null)
         {
-            if (ModelState.IsValid)
-            {
-                var user = await userManager.FindByEmailAsync(oldemail);
-                if (model.Email != oldemail && (userManager.Users.Where(u => u.Email == model.Email).Count()) == 0)
-                {
-
-                    var code = await userManager.GenerateChangeEmailTokenAsync(user, model.Email);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callBackAction = Url.Action(new Microsoft.AspNetCore.Mvc.Routing.UrlActionContext()
-                    {
-                        Action = "ChangeEmail",
-                        Controller = "Account",
-                        Values = new { code = code, email = oldemail, newEmail = model.Email },
-                        //Host = Request.Host.Value,
-                        Protocol = Request.Scheme,
-
-
-                    });
-                    var sent = await sender.send(oldemail, "Change Email",
-                         $"Please change your email by <a href='{HtmlEncoder.Default.Encode(callBackAction)}'>clicking here</a>.");
-
-
-                }
-                else
-                    ModelState.AddModelError(string.Empty, "This email is already exist");
-                if (ImageFile != null) 
-                {
-                    model.Image = ImageFile?.FileName ?? string.Empty;
-                    //using (MemoryStream stream = new MemoryStream()) 
-                    //{
-                        
-                        //await ImageFile.CopyToAsync(stream);
-                        using (var stream1 = System.IO.File.Create(Environment.CurrentDirectory + "\\wwwroot\\Images" + $"\\{model.Image}"))
-                        {
-                            await ImageFile.CopyToAsync(stream1);
-                        }
-                         
-                        var claim = (await userManager.GetClaimsAsync(user)).FirstOrDefault(c => c.Type == "Image");
-                        if (claim != null)
-                        {
-                            await userManager.RemoveClaimAsync(user, claim);
-                        }
-                        await userManager.AddClaimAsync(user, new Claim("Image", model.Image));
-                        
-                    //}
-                }
-                
-
-                var result = (ApplicationUser)mapper.Map(model, user, model.GetType(), user.GetType());
-                result.Email = oldemail;
-                if ((await userManager.UpdateAsync(result)).Succeeded)
-                    return RedirectToAction("Profile");
-                ModelState.AddModelError(string.Empty, "can't update this user");
-                
-            }
-            return View("Profile",model);
+            Response.Headers.CacheControl = "private, no-store";
+            return PhysicalFile(image.PhysicalPath, image.ContentType);
         }
-        [HttpGet]
-        public async Task<IActionResult> ChangeEmail(string code,string email,string newEmail)
+
+        var defaultImage = Path.Combine(_environment.WebRootPath, "Images", "default.jpg");
+        return System.IO.File.Exists(defaultImage)
+            ? PhysicalFile(defaultImage, "image/jpeg")
+            : NotFound();
+    }
+
+    [HttpGet]
+    [Authorize]
+    public IActionResult ConfirmEmailChange(string? code, string? newEmail)
+    {
+        if (string.IsNullOrWhiteSpace(code) || !MailAddress.TryCreate(newEmail, out _))
         {
-            var decodedCoed = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
-            var user = await userManager.FindByEmailAsync(email);
-           await userManager.ChangeEmailAsync(user,newEmail,decodedCoed);
-            user.UserName = new MailAddress(newEmail).User;
-            await userManager.UpdateAsync(user);
-            return RedirectToAction("Profile");
+            return BadRequest();
         }
 
+        return View(new EmailChangeConfirmationVm { Code = code, NewEmail = newEmail! });
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> ConfirmEmailChange(EmailChangeConfirmationVm model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+        {
+            return Challenge();
+        }
+
+        string decodedToken;
+        try
+        {
+            decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(model.Code));
+        }
+        catch (FormatException)
+        {
+            return BadRequest();
+        }
+
+        var result = await _userManager.ChangeEmailAsync(user, model.NewEmail.Trim(), decodedToken);
+        if (!result.Succeeded)
+        {
+            ModelState.AddModelError(string.Empty, "This email confirmation link is invalid or expired.");
+            return View(model);
+        }
+
+        await _signInManager.RefreshSignInAsync(user);
+        await _auditLogger.RecordAsync("account.email-changed", user.Id, user.Id, "user", user.Id);
+        TempData["StatusMessage"] = "Your email address was updated.";
+        return RedirectToAction(nameof(Profile));
+    }
+
+    [HttpGet]
+    public IActionResult AccessDenied() => View();
+
+    private async Task QueuePasswordResetAsync(string email)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null || !user.EmailConfirmed)
+        {
+            return;
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        var resetUrl = Url.Action(nameof(ResetPassword), "Account", new { code = encodedToken, email = user.Email }, Request.Scheme);
+        if (resetUrl is not null)
+        {
+            _emailQueue.TryEnqueue(user.Email!, "Reset your CareAxis password",
+                EmailTemplates.PasswordReset(user.FirstName, resetUrl));
+        }
+    }
+
+    private IActionResult SafeLocalRedirect(string? returnUrl) =>
+        !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? LocalRedirect(returnUrl)
+            : RedirectToAction("Index", "Home");
+
+    private async Task<IActionResult> RedirectToRoleHomeAsync(ApplicationUser user)
+    {
+        if (await _userManager.IsInRoleAsync(user, Role.Admin.ToString()))
+        {
+            return RedirectToAction("Index", "Admin");
+        }
+        if (await _userManager.IsInRoleAsync(user, Role.Doctor.ToString()))
+        {
+            return RedirectToAction("Index", "Doctor");
+        }
+        if (await _userManager.IsInRoleAsync(user, Role.Patient.ToString()))
+        {
+            return RedirectToAction("Index", "Patient");
+        }
+        return RedirectToAction("Index", "Home");
+    }
+
+    private void AddIdentityErrors(IdentityResult result)
+    {
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
     }
 }

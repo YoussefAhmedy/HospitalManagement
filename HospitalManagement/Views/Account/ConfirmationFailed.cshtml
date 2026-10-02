@@ -1,0 +1,14 @@
+@{
+    ViewData["Title"] = "Verification link unavailable";
+    ViewData["BodyClass"] = "auth-page";
+    ViewData["MainClass"] = "auth-main";
+}
+<section class="auth-card" aria-labelledby="confirmation-failed-heading">
+    <span class="eyebrow">Email verification</span>
+    <h1 id="confirmation-failed-heading">This link could not be used</h1>
+    <p class="auth-card__lead">The verification link may be invalid, expired, or already used. You can request another link if the account is still unverified.</p>
+    <div class="form-actions">
+        <a class="button button--primary" asp-controller="Account" asp-action="Registered">Request another verification link</a>
+        <a class="button" asp-controller="Account" asp-action="LogIn">Back to sign in</a>
+    </div>
+</section>

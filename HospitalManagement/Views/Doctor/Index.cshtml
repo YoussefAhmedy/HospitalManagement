@@ -1,0 +1,91 @@
+@model DoctorDashboardVm
+@{
+    ViewData["Title"] = "Clinician overview";
+    var firstName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+}
+
+<section class="container page-header">
+    <div class="page-header__eyebrow">Clinician workspace</div>
+    <h1>Good day@(string.IsNullOrWhiteSpace(firstName) ? string.Empty : $", Dr. {firstName}")</h1>
+    <p>Your schedule and pending appointment requests.</p>
+</section>
+
+<section class="container dashboard-grid" aria-label="Clinician overview">
+    <article class="stat-card dashboard-span-4">
+        <div class="stat-card__label">Pending requests</div>
+        <div class="stat-card__value">@Model.PendingAppointments</div>
+    </article>
+    <article class="stat-card dashboard-span-4">
+        <div class="stat-card__label">Today’s schedule</div>
+        <div class="stat-card__value">@Model.TodayAppointments.Count</div>
+    </article>
+    <article class="stat-card dashboard-span-4">
+        <div class="stat-card__label">Upcoming appointments</div>
+        <div class="stat-card__value">@Model.UpcomingAppointments.Count</div>
+    </article>
+
+    <div class="dashboard-actions dashboard-span-12">
+        <a class="button button--primary" asp-controller="Doctor" asp-action="GetAppointments">Review schedule <span aria-hidden="true">→</span></a>
+        <a class="button" asp-controller="Doctor" asp-action="GetMedicalRecords">View authorized records</a>
+        <a class="button" asp-controller="Doctor" asp-action="AddMedicalRecord">Create a clinical note</a>
+    </div>
+
+    <section class="panel-card dashboard-span-7" aria-labelledby="today-heading">
+        <div class="panel-card__heading">
+            <div><h2 id="today-heading">Today</h2><p>Appointments assigned to your account.</p></div>
+            <a asp-controller="Doctor" asp-action="GetAppointments">Full schedule</a>
+        </div>
+        @if (Model.TodayAppointments.Count == 0)
+        {
+            <div class="empty-state">No appointments are scheduled for today.</div>
+        }
+        else
+        {
+            <div class="dashboard-list">
+                @foreach (var appointment in Model.TodayAppointments)
+                {
+                    var patientName = appointment.Patient is null ? "Patient" : $"{appointment.Patient.FirstName} {appointment.Patient.LastName}";
+                    var status = appointment.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.NotApproved ? "Declined" : appointment.Status.ToString();
+                    var statusClass = appointment.Status switch
+                    {
+                        Hospital.DAL.Entities.OwnedTypes.AppointStatus.Approved => "status-pill--approved",
+                        Hospital.DAL.Entities.OwnedTypes.AppointStatus.Pending => "status-pill--pending",
+                        Hospital.DAL.Entities.OwnedTypes.AppointStatus.Cancelled => "status-pill--cancelled",
+                        _ => "status-pill--declined"
+                    };
+                    <div class="dashboard-list__item">
+                        <span><strong>@patientName</strong><small>@appointment.AppointmentDate.ToString("ddd, dd MMM yyyy")</small></span>
+                        <span class="status-pill @statusClass">@status</span>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="panel-card dashboard-span-5" aria-labelledby="pending-heading">
+        <div class="panel-card__heading">
+            <div><h2 id="pending-heading">Upcoming</h2><p>Requests and visits in your schedule.</p></div>
+        </div>
+        @if (Model.UpcomingAppointments.Count == 0)
+        {
+            <div class="empty-state">No upcoming appointments are assigned to you.</div>
+        }
+        else
+        {
+            <div class="dashboard-list">
+                @foreach (var appointment in Model.UpcomingAppointments.Take(6))
+                {
+                    var patientName = appointment.Patient is null ? "Patient" : $"{appointment.Patient.FirstName} {appointment.Patient.LastName}";
+                    <div class="dashboard-list__item">
+                        <span><strong>@patientName</strong><small>@appointment.AppointmentDate.ToString("dd MMM yyyy") · @appointment.Status</small></span>
+                        @if (appointment.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.Pending)
+                        {
+                            <a class="button button--small" asp-controller="Doctor" asp-action="EditAppointment" asp-route-id="@appointment.AppointmentID">Review</a>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        <p class="form-hint mt-3 mb-0">Clinical information is shown only within your authorized clinician workspace.</p>
+    </section>
+</section>

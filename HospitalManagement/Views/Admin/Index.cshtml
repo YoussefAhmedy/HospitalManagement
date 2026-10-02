@@ -1,52 +1,33 @@
-﻿
+@model AdminIndexVm
 @{
-    ViewData["Title"] = "Index";
-    Layout = "Admin_Layout";
+    ViewData["Title"] = "Operations overview";
 }
 
-<h1>Hospital Dashboard</h1>
-<div class="dashboard">
-    <div class="card">
-        <div class="info">
-            <div class="number">@Model.NoOfDoctors</div>
-            <div class="label">No of Doctors</div>
-        </div>
-        <i class="fas fa-user-md"></i>
-    </div>
-    <div class="card">
-        <div class="info">
-            <div class="number">@Model.NoOfPatients</div>
-            <div class="label">No of Patients</div>
-        </div>
-        <i class="fas fa-user"></i>
-    </div>
-    <div class="card">
-        <div class="info">
-            <div class="number">@Model.NoOfAppoint</div>
-            <div class="label">No of Appointments</div>
-        </div>
-        <i class="fas fa-calendar-alt"></i>
-    </div>
-    <div class="card">
-        <div class="info">
-            <div class="number">@Model.NoOfMedical</div>
-            <div class="label">No of Medical Records</div>
-        </div>
-        <i class="fas fa-file-medical"></i>
-    </div>
-    <div class="card">
-        <div class="info">
-            <div class="number">@Model.NoOfNewAppoint</div>
-            <div class="label">New Appointments</div>
-        </div>
-        <i class="fas fa-calendar-plus"></i>
-    </div>
-    <div class="card">
-        <div class="info">
-            <div class="number">@Model.NoOfTodayPatient</div>
-            <div class="label">Today Patient</div>
-        </div>
-        <i class="fas fa-user-md"></i>
-    </div>
-</div>
+<div class="container">
+<section class="page-header">
+    <div class="page-header__eyebrow">Administration</div>
+    <h1>Operations overview</h1>
+    <p>Manage clinician access, schedules, and operational records.</p>
+</section>
 
+<section class="dashboard-grid" aria-label="Operations summary">
+    <article class="stat-card dashboard-span-4"><div class="stat-card__label">Clinicians</div><div class="stat-card__value">@Model.NoOfDoctors</div></article>
+    <article class="stat-card dashboard-span-4"><div class="stat-card__label">Patient accounts</div><div class="stat-card__value">@Model.NoOfPatients</div></article>
+    <article class="stat-card dashboard-span-4"><div class="stat-card__label">Appointment requests</div><div class="stat-card__value">@Model.NoOfAppoint</div></article>
+    <article class="stat-card dashboard-span-4"><div class="stat-card__label">Upcoming requests</div><div class="stat-card__value">@Model.NoOfNewAppoint</div></article>
+    <article class="stat-card dashboard-span-4"><div class="stat-card__label">Approved today</div><div class="stat-card__value">@Model.NoOfTodayPatient</div></article>
+    <article class="stat-card dashboard-span-4"><div class="stat-card__label">Medical records</div><div class="stat-card__value">@Model.NoOfMedical</div></article>
+
+    <section class="panel-card dashboard-span-12" aria-labelledby="admin-actions-heading">
+        <div class="panel-card__heading"><div><h2 id="admin-actions-heading">Administration tasks</h2><p>Access is restricted to administrator accounts.</p></div></div>
+        <div class="dashboard-actions">
+            <a class="button button--primary" asp-controller="Admin" asp-action="CreateDoctor">Create clinician account</a>
+            <a class="button" asp-controller="Admin" asp-action="ListDoctors">Manage clinicians</a>
+            <a class="button" asp-controller="Admin" asp-action="GetPatients">Patient accounts</a>
+            <a class="button" asp-controller="Admin" asp-action="CreateSchedule">Configure schedules</a>
+            <a class="button" asp-controller="Admin" asp-action="GetMedicalRecords">Records inventory</a>
+        </div>
+        <p class="form-hint mb-0">Record counts are provided for operations and do not expose clinical content.</p>
+    </section>
+</section>
+</div>

@@ -1,88 +1,75 @@
-﻿@model RegisterViewModel
+@model RegisterViewModel
 @{
-    ViewData["Title"] = "Register";
-    Layout = "_RegisterLayout"; // Ensure this is your updated layout file
+    ViewData["Title"] = "Create a patient account";
+    ViewData["BodyClass"] = "auth-page";
+    ViewData["MainClass"] = "auth-main";
 }
 
+<section class="auth-card auth-card--wide" aria-labelledby="register-heading">
+    <span class="eyebrow">Patient access</span>
+    <h1 id="register-heading">Create your account</h1>
+    <p class="auth-card__lead">Registration creates a patient account. Email verification is required before sign-in.</p>
 
-
-
-
-<div class="container">
-        <div class="form-section">
-            <h2>Create Account</h2>
-        <p><a asp-action="Index" asp-controller="Home">Home</a></p>
-            <form asp-action="Register" asp-controller="Account" method="post" enctype="multipart/form-data">
-                <div asp-validation-summary="All" class="text-danger"></div>
-
-                <div class="input-group">
-                    <label asp-for="FirstName"></label>
-                    <input class="text" asp-for="FirstName" placeholder="First Name" required />
-                    <span asp-validation-for="FirstName" class="text-danger"></span>
-                </div>
-
-                <div class="input-group">
-                    <label asp-for="LastName"></label>
-                    <input class="text" asp-for="LastName" placeholder="Last Name" required />
-                    <span asp-validation-for="LastName" class="text-danger"></span>
-                </div>
-
-                <div class="input-group">
-                    <label asp-for="PhoneNumber"></label>
-                    <input class="text" asp-for="PhoneNumber" placeholder="Phone Number" required />
-                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-                </div>
-
-                <div class="input-group">
-                    <label asp-for="Email">Email Address</label>
-                    <input class="em" type="email" asp-for="Email" placeholder="Email" required />
-                    <span asp-validation-for="Email" class="text-danger"></span>
-                </div>
-
-                <div class="input-group">
-                    <label asp-for="Password"></label>
-                    <input class="pass" asp-for="Password" placeholder="Password" required />
-                    <span asp-validation-for="Password" class="text-danger"></span>
-                </div>
-
-                <div class="input-group">
-                    <label asp-for="ConfirmedPassword"></label>
-                    <input class="pass" asp-for="ConfirmedPassword" placeholder="Confirm Password" required />
-                    <span asp-validation-for="ConfirmedPassword" class="text-danger"></span>
-                </div>
-
-                <div class="input-group">
-                    <label asp-for="DateOfBirth"></label>
-                    <input class="pass" asp-for="DateOfBirth" type="date" required />
-                    <span asp-validation-for="DateOfBirth" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="Gender"></label>
-                    <select asp-for="Gender" class="form-control">
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-                    <span asp-validation-for="Gender" class="text-danger"></span>
-                </div>
-
-               
-
-                <input class="sub" type="submit" value="Sign Up">
-                <p>Have an Account? <a asp-action="LogIn" asp-controller="Account">Sign in</a></p>
-            </form>
+    <form asp-action="Register" asp-controller="Account" method="post">
+        <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+        <div class="form-grid">
+            <div>
+                <label class="form-label" asp-for="FirstName"></label>
+                <input class="form-control" asp-for="FirstName" autocomplete="given-name" />
+                <span asp-validation-for="FirstName" class="field-validation-error"></span>
+            </div>
+            <div>
+                <label class="form-label" asp-for="LastName"></label>
+                <input class="form-control" asp-for="LastName" autocomplete="family-name" />
+                <span asp-validation-for="LastName" class="field-validation-error"></span>
+            </div>
+            <div>
+                <label class="form-label" asp-for="Email"></label>
+                <input class="form-control" asp-for="Email" type="email" autocomplete="email" inputmode="email" />
+                <span asp-validation-for="Email" class="field-validation-error"></span>
+            </div>
+            <div>
+                <label class="form-label" asp-for="PhoneNumber"></label>
+                <input class="form-control" asp-for="PhoneNumber" type="tel" autocomplete="tel" />
+                <span asp-validation-for="PhoneNumber" class="field-validation-error"></span>
+            </div>
+            <div>
+                <label class="form-label" asp-for="DateOfBirth"></label>
+                <input class="form-control" asp-for="DateOfBirth" type="date" autocomplete="bday" />
+                <span asp-validation-for="DateOfBirth" class="field-validation-error"></span>
+            </div>
+            <div>
+                <label class="form-label" asp-for="Gender"></label>
+                <select class="form-select" asp-for="Gender">
+                    <option value="">Select an option</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                </select>
+                <span asp-validation-for="Gender" class="field-validation-error"></span>
+            </div>
+            <div>
+                <label class="form-label" asp-for="Password"></label>
+                <input class="form-control" asp-for="Password" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="field-validation-error"></span>
+                <p class="form-hint">Use a unique password. The deployment enforces the configured password policy.</p>
+            </div>
+            <div>
+                <label class="form-label" asp-for="ConfirmedPassword"></label>
+                <input class="form-control" asp-for="ConfirmedPassword" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmedPassword" class="field-validation-error"></span>
+            </div>
         </div>
-    </div>
+        <p class="form-hint mt-3">Only enter information requested for this demonstration. Do not submit real patient records or sensitive health information.</p>
+        <div class="form-actions">
+            <button class="button button--primary" type="submit">Create patient account</button>
+            <a class="button" asp-controller="Home" asp-action="Index">Cancel</a>
+        </div>
+    </form>
 
-
-@section Style {
-        <link rel="stylesheet" href="/css/newregister.css">
-}
-
+    <div class="auth-card__footer"><span>Already have an account? <a asp-controller="Account" asp-action="LogIn">Sign in</a></span></div>
+</section>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <partial name="_ValidationScriptsPartial" />
 }

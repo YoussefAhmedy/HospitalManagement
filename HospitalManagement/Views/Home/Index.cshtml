@@ -1,762 +1,141 @@
-﻿@using Hospital.BLL.Helpers
+@using Hospital.BLL.Helpers
 @model MainVm
 @{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Care coordination, made clearer";
+    ViewData["Description"] = "A healthcare workflow demonstration for appointment requests, clinician review, and authorized record access.";
+    var doctors = Model?.Doctors?.Take(6).ToList() ?? [];
 }
 
-<!-- Navbar start -->
-@section Header
-{
-    <!-- Navbar Start -->
-    <div class="container-fluid position-relative p-0">
-        <nav class="navbar navbar-expand-lg navbar-light bg-white px-4 px-lg-5 py-3 py-lg-0">
-            <a asp-action="Index" asp-controller="Home" class="navbar-brand p-0">
-                <h1 class="text-primary m-0"><i class="fas fa-star-of-life me-3"></i>Hospital</h1>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-                <span class="fa fa-bars"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarCollapse">
-                <div class="navbar-nav ms-auto py-0">
-                    <a href="#AboutUs" class="nav-item nav-link">About Us</a>
-
-                    @if (!User.Identity.IsAuthenticated)
+<section class="hero">
+    <div class="container hero__grid">
+        <div>
+            <span class="eyebrow">Care coordination platform</span>
+            <h1>Better organized care starts with <em>clear next steps.</em></h1>
+            <p class="hero__copy">CareAxis brings appointment requests, clinician review, and authorized health-record workflows into one considered experience.</p>
+            <div class="hero__actions">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    if (User.IsInRole(Role.Patient.ToString()))
                     {
-                        <a href="#services" class="nav-item nav-link">Services</a>
-                        <a href="#doctors" class="nav-item nav-link">Our Doctors</a>
+                        <a class="button button--primary" asp-controller="Patient" asp-action="AddAppointment">Request an appointment <span aria-hidden="true">→</span></a>
+                        <a class="button" asp-controller="Patient" asp-action="Index">Open patient overview</a>
                     }
-                    <a href="#Contact" class="nav-item nav-link">Contact</a>
-
-                    @if (User.Identity.IsAuthenticated && User.IsInRole(Role.Patient.ToString()))
+                    else if (User.IsInRole(Role.Doctor.ToString()))
                     {
-                        <a asp-action="GetMedicalRecords" asp-controller="Patient" class="nav-item nav-link">My Medical Records</a>
-                        <a asp-action="ListAppointments" asp-controller="Patient" class="nav-item nav-link">My Appointments</a>
-                        <a asp-action="AddAppointment" asp-controller="Patient" class="nav-item nav-link">Request Appointment</a>
-                    }
-
-                    @if (User.IsInRole(Role.Doctor.ToString()))
-                    {
-                        <a asp-action="GetAppointments" asp-controller="Doctor" class="nav-item nav-link">Booked Appointments</a>
-                        <a asp-action="AddMedicalRecord" asp-controller="Doctor" class="nav-item nav-link">Add Record</a>
-                        <a asp-action="GetMedicalRecords" asp-controller="Doctor" class="nav-item nav-link">Records</a>
-                    }
-                </div>
-
-                <div class="auth-buttons">
-                    @if (User?.Identity?.IsAuthenticated ?? false)
-                    {
-                        <a asp-action="LogOut" asp-controller="Account" class="btn btn-primary rounded-pill text-white py-2 px-4">Log out</a>
-                    
-                        var Image = string.IsNullOrEmpty(User.FindFirst("Image")?.Value) ? "default.jpg" : User.FindFirst("Image")?.Value;
-
-
-                        <a href="/Account/Profile">
-                            <img class="rounded-circle img-fluid" alt="avatar1" src="/Images/@Image" style="object-fit : fill; width : 60px; height :60px">
-                        </a>
-                        
+                        <a class="button button--primary" asp-controller="Doctor" asp-action="Index">Open clinician workspace <span aria-hidden="true">→</span></a>
                     }
                     else
                     {
-                        <a asp-action="LogIn" asp-controller="Account" class="btn btn-primary rounded-pill text-white py-2 px-4">Login</a>
-                        <a asp-action="Register" asp-controller="Account" class="btn btn-primary rounded-pill text-white py-2 px-4">Create Account</a>
-                    }
-                </div>
-            </div>
-        </nav>
-    </div>
-    <!-- Navbar End -->
-}
-
-<!-- Navbar End -->
-
-<!-- Carousel Start -->
-<div class="header-carousel owl-carousel">
-    <div class="header-carousel-item">
-        <img src="/img/carousel-1.jpg" class="img-fluid w-100" alt="Image">
-        <div class="carousel-caption">
-            <div class="carousel-caption-content p-3">
-                <h5 class="text-white text-uppercase fw-bold mb-4" style="letter-spacing: 3px;">Physiotherapy Center</h5>
-                <h1 class="display-1 text-capitalize text-white mb-4">Best Solution For Painful Life</h1>
-                <p class="mb-5 fs-5">
-                    Our team of expert physiotherapists offers personalized treatment plans to help you recover from injuries and regain strength.
-                </p>
-                @if (User.IsInRole(Role.Patient.ToString()))
-                {
-                    <a class="btn btn-primary rounded-pill text-white py-3 px-5" asp-controller="Patient" asp-action="AddAppointment">Book Appointment</a>
-                }
-                
-            </div>
-        </div>
-    </div>
-    <div class="header-carousel-item">
-        <img src="/img/carousel-2.jpg" class="img-fluid w-100" alt="Image">
-        <div class="carousel-caption">
-            <div class="carousel-caption-content p-3">
-                <h5 class="text-white text-uppercase fw-bold mb-4" style="letter-spacing: 3px;">Advanced Treatment</h5>
-                <h1 class="display-1 text-capitalize text-white mb-4">Live a Pain-Free Life</h1>
-                <p class="mb-5 fs-5 animated slideInDown">
-                    We use the latest technology and techniques to ensure quick and lasting recovery, tailored to your specific needs.
-                </p>
-                @if (User.IsInRole(Role.Patient.ToString()))
-                {
-                    <a class="btn btn-primary rounded-pill text-white py-3 px-5" asp-controller="Patient" asp-action="AddAppointment">Book Appointment</a>
-                }
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Carousel End -->
-<!-- Services Start -->
-<div id="services" class="container-fluid service py-5">
-    <div class="container py-5">
-        <div class="section-title mb-5 wow fadeInUp" data-wow-delay="0.2s">
-            <div class="sub-style">
-                <h4 class="sub-title px-3 mb-0">What We Do</h4>
-            </div>
-            <h1 class="display-3 mb-4">Our Service Given Physio Therapy By Experts.</h1>
-            <p class="mb-0">At our clinic, we offer a variety of therapeutic services aimed at improving your physical health and wellbeing. Our experts utilize the latest techniques and treatments to ensure you get back to your best self in no time.</p>
-        </div>
-        <div class="row g-4 justify-content-center">
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.1s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-1.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Family Doctor</h5>
-                            <p class="mb-4">Comprehensive medical care for individuals and families, focusing on preventive health measures and personalized treatment plans.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.3s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-2.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Cardiology</h5>
-                            <p class="mb-4">Specialized care for heart-related conditions, including diagnosis, treatment, and management of cardiovascular diseases.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.5s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-3.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Surgery</h5>
-                            <p class="mb-4">Expert surgical interventions for a wide range of conditions, ensuring the highest standards of care and safety.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.7s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-4.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Physical Therapy</h5>
-                            <p class="mb-4">Tailored physiotherapy sessions focused on restoring movement, enhancing strength, and providing pain relief through targeted techniques.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.1s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-5.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Sports Injury</h5>
-                            <p class="mb-4">Our physiotherapists provide targeted treatment for sports injuries, helping athletes recover quickly and get back to peak performance.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.3s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-6.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Heat & Cold Therapy</h5>
-                            <p class="mb-4">Using the power of temperature, our heat and cold therapy helps in reducing inflammation, easing joint pain, and promoting recovery after injuries.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.5s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-7.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Head & Cold Therapy</h5>
-                            <p class="mb-4">Our therapy options utilize temperature control to alleviate pain, promote relaxation, and enhance recovery for various conditions.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.7s">
-                <div class="service-item rounded">
-                    <div class="service-img rounded-top">
-                        <img src="/img/service-8.jpg" class="img-fluid rounded-top w-100" alt="">
-                    </div>
-                    <div class="service-content rounded-bottom bg-light p-4">
-                        <div class="service-content-inner">
-                            <h5 class="mb-4">Optician</h5>
-                            <p class="mb-4">Expert eye care services, including vision assessments and corrective lenses tailored to your specific needs.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 text-center wow fadeInUp" data-wow-delay="0.2s">
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Services End -->
-<!-- About Start -->
-<div id="AboutUs" class="container-fluid about bg-light py-5">
-    <div class="container py-5">
-        <div class="row g-5 align-items-center">
-            <div class="col-lg-5 wow fadeInLeft" data-wow-delay="0.2s">
-                <div class="about-img pb-5 ps-5">
-                    <img src="/img/about-1.jpg" class="img-fluid rounded w-100" style="object-fit: cover;" alt="Image">
-                    <div class="about-img-inner">
-                        <img src="/img/about-2.jpg" class="img-fluid rounded-circle w-100 h-100" alt="Image">
-                    </div>
-                    <div class="about-experience">15 years experience</div>
-                </div>
-            </div>
-            <div class="col-lg-7 wow fadeInRight" data-wow-delay="0.4s">
-                <div class="col-lg-7 wow fadeInRight" data-wow-delay="0.4s">
-                    <div class="section-title text-start mb-5">
-                        <h4 class="sub-title pe-3 mb-0">About Us</h4>
-                        <h1 class="display-3 mb-4">Committed to Your Health and Well-Being</h1>
-                        <p class="mb-4">At our hospital, we strive to provide exceptional medical care and compassionate support to every patient. With a team of experienced professionals and state-of-the-art facilities, we are dedicated to improving the health and lives of our community.</p>
-                        <div class="mb-4">
-                            <p class="text-secondary"><i class="fa fa-check text-primary me-2"></i> Personalized treatment plans tailored to your needs.</p>
-                            <p class="text-secondary"><i class="fa fa-check text-primary me-2"></i> Cutting-edge medical technology and innovative procedures.</p>
-                            <p class="text-secondary"><i class="fa fa-check text-primary me-2"></i> A caring and compassionate staff ready to assist you.</p>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- About End -->
-    <!-- Feature Start -->
-    <div id="choose" class="container-fluid feature py-5">
-        <div class="container py-5">
-            <div class="section-title mb-5 wow fadeInUp" data-wow-delay="0.1s">
-                <div class="sub-style">
-                    <h4 class="sub-title px-3 mb-0">Why Choose Us</h4>
-                </div>
-                <h1 class="display-3 mb-4">Why Choose Us? Get Your Life Style Back</h1>
-                <p class="mb-0">At our hospital, we provide comprehensive care to help you achieve your health goals. Our dedicated team of professionals is committed to offering personalized treatments tailored to your needs, ensuring a comfortable and supportive environment.</p>
-            </div>
-            <div class="row g-4 justify-content-center">
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.1s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fas fa-diagnoses fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Licensed Therapists</h5>
-                                <p class="mb-0">Our therapists are fully licensed and experienced in a range of treatment techniques, ensuring the highest quality of care for your recovery.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.3s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fas fa-briefcase-medical fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Personalized Treatment</h5>
-                                <p class="mb-0">Each treatment plan is tailored to your specific needs, ensuring you receive the best possible care for your unique health goals.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.5s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fas fa-hospital-user fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Therapy Goals</h5>
-                                <p class="mb-0">We work with you to set achievable therapy goals, helping you regain mobility, reduce pain, and improve overall quality of life.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.7s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fas fa-users fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Practitioners Network</h5>
-                                <p class="mb-0">Our wide network of practitioners ensures that you have access to specialized care whenever you need it.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.1s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fas fa-spa fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Comfortable Center</h5>
-                                <p class="mb-0">Our center is designed with your comfort in mind, providing a peaceful and welcoming atmosphere to support your healing journey.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.3s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fas fa-heart fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Experienced Staff</h5>
-                                <p class="mb-0">Our staff brings years of experience to the table, ensuring you receive expert care throughout your treatment.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.5s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fab fa-pied-piper fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Innovative Therapies</h5>
-                                <p class="mb-0">We incorporate the latest therapeutic innovations to ensure you benefit from the most advanced treatments available.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 col-xl-3 wow fadeInUp" data-wow-delay="0.7s">
-                    <div class="row-cols-1 feature-item p-4">
-                        <div class="col-12">
-                            <div class="feature-icon mb-4">
-                                <div class="p-3 d-inline-flex bg-white rounded">
-                                    <i class="fas fa-user-md fa-4x text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="feature-content d-flex flex-column">
-                                <h5 class="mb-4">Skilled Professionals</h5>
-                                <p class="mb-0">Our skilled professionals are here to guide you through every step of your recovery with expertise and compassion.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 text-center wow fadeInUp" data-wow-delay="0.2s">
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Feature End -->
-    <!-- Book Appointment Start -->
-    <div id="appointment" class="container-fluid appointment py-5">
-        <div class="container py-5">
-            <div class="row g-5 align-items-center">
-                <div class="col-lg-6 wow fadeInLeft" data-wow-delay="0.2">
-                    <div class="section-title text-start">
-                        <h4 class="sub-title pe-3 mb-0">Solutions To Your Pain</h4>
-                        <h1 class="display-4 mb-4">Best Quality Services With Minimal Pain Rate</h1>
-                        <p class="mb-4">Lorem ipsum dolor sit amet consectetur adipisicing elit. Quaerat deleniti amet at atque sequi quibusdam cumque itaque repudiandae temporibus, eius nam mollitia voluptas maxime veniam necessitatibus saepe in ab? Repellat!</p>
-                        <div class="row g-4">
-                            <div class="col-sm-6">
-                                <div class="d-flex flex-column h-100">
-                                    <div class="mb-4">
-                                        <h5 class="mb-3"><i class="fa fa-check text-primary me-2"></i> Body Relaxation</h5>
-                                        <p class="mb-0">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Et deserunt qui cupiditate veritatis enim ducimus.</p>
-                                    </div>
-                                    <div class="mb-4">
-                                        <h5 class="mb-3"><i class="fa fa-check text-primary me-2"></i> Body Relaxation</h5>
-                                        <p class="mb-0">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Et deserunt qui cupiditate veritatis enim ducimus.</p>
-                                    </div>
-                                    <div class="text-start mb-4">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <div class="video h-100">
-                                    <img src="/img/video-img.jpg" class="img-fluid rounded w-100 h-100" style="object-fit: cover;" alt="">
-                                    <button type="button" class="btn btn-play" data-bs-toggle="modal" data-src="https://www.youtube.com/embed/DWRcNpR6Kdc" data-bs-target="#videoModal">
-                                        <span></span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6 wow fadeInRight" data-wow-delay="0.4s">
-                    <div class="appointment-form rounded p-5">
-                        <p class="fs-4 text-uppercase text-primary">Get In Touch</p>
-                        <h1 class="display-5 mb-4">Get Appointment</h1>
-                        <form>
-                            <div class="row gy-3 gx-4">
-                                <div class="col-12">
-                                    <div style="color : black "> Feel uncomfartable and Want Your Life to be better </div>
-                                    @if (User.IsInRole(Role.Patient.ToString()))
-                                    {
-                                        <a asp-action="AddAppointment" asp-controller="Patient" class="btn btn-primary text-white w-100 py-3 px-5">Book Appointment  Now</a>
-                                    }
-                                    
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Modal Video -->
-    <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content rounded-0">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Youtube Video</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- 16:9 aspect ratio -->
-                    <div class="ratio ratio-16x9">
-                        <iframe class="embed-responsive-item" src="" id="video" allowfullscreen allowscriptaccess="always"
-                                allow="autoplay"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Book Appointment End -->
-    <!-- Doctors Start -->
-    <div id="doctors" class="container py-5">
-        <div class="section-title mb-5 wow fadeInUp" data-wow-delay="0.1s">
-            <h4 class="sub-title px-3 mb-0">Meet Our Doctors</h4>
-            <h1 class="display-3 mb-4">Expert Care from Professional Doctors</h1>
-            <p class="mb-0">Experience exceptional care and expertise with our dedicated team of doctors, committed to providing the highest quality of medical services tailored to your needs.</p>
-        </div>
-
-        <div class="row g-4 justify-content-center">
-            @if (Model.Doctors != null)
-            {
-                int delay = 0;
-                if (User.Identity.IsAuthenticated && User.IsInRole(Role.Patient.ToString()))
-                {
-                    @foreach (var doc in Model.Doctors)
-                    {
-                        var Image = string.IsNullOrEmpty(doc.Image) ? "defaultDoc.jpg" : doc.Image;
-
-                        <div class="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="@($"{delay * 0.2}s")">
-                            <a asp-action="GetDoctorDetails" asp-controller="Patient" asp-route-id="@doc.Id" style="text-decoration:none;">
-                                <div class="team-item rounded shadow">
-                                    <div class="team-img rounded-top h-100">
-                                        <img alt="Doctor Image" src="/Images/@Image" class="img-fluid rounded-top w-100" />
-                                    </div>
-                                    <div class="team-content text-center border border-primary border-top-0 rounded-bottom p-4">
-                                        <h5>Dr. @doc.FirstName @doc.LastName</h5>
-                                        <p class="mb-0">@doc.Specialization?.Name</p>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        delay++;
+                        <a class="button button--primary" asp-controller="Admin" asp-action="Index">Open operations <span aria-hidden="true">→</span></a>
                     }
                 }
                 else
                 {
-                    @foreach (var doc in Model.Doctors)
-                    {
-                        var Image = string.IsNullOrEmpty(doc.Image) ? "defaultDoc.jpg" : doc.Image;
-
-                        <div class="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="@($"{delay * 0.2}s")">
-                            <div class="team-item rounded shadow">
-                                <div class="team-img rounded-top h-100">
-                                    <img alt="Doctor Image" src="/Images/@Image" class="img-fluid rounded-top w-100" />
-                                </div>
-                                <div class="team-content text-center border border-primary border-top-0 rounded-bottom p-4">
-                                    <h5>Dr. @doc.FirstName @doc.LastName</h5>
-                                    <p class="mb-0">@doc.Specialization?.Name</p>
-                                </div>
-                            </div>
-                        </div>
-                        delay++;
-                    }
+                    <a class="button button--primary" asp-controller="Account" asp-action="Register">Create a patient account <span aria-hidden="true">→</span></a>
+                    <a class="button" asp-controller="Account" asp-action="LogIn">Sign in</a>
                 }
-            }
+            </div>
+            <p class="hero__footnote">Demonstration software only. Not for emergencies, diagnosis, or treatment decisions.</p>
+        </div>
+        <div class="hero__visual" aria-label="Illustration of a care coordination dashboard">
+            <div class="care-card">
+                <div class="care-card__top">
+                    <div>
+                        <div class="care-card__label">Your workspace</div>
+                        <div class="care-card__title">Care, in one place</div>
+                    </div>
+                    <span class="demo-badge">Illustrative preview</span>
+                </div>
+                <div class="care-card__appointment">
+                    <div class="date-tile"><strong>01</strong><span>Request</span></div>
+                    <div><strong>Appointment request</strong><small>Submit a preferred date and clinician</small></div>
+                </div>
+                <div class="care-card__list" aria-label="Example workflow stages">
+                    <div class="care-card__row"><span><i class="dot" aria-hidden="true"></i> Clinician review</span><span class="status-pill status-pill--pending">Pending</span></div>
+                    <div class="care-card__row"><span><i class="dot dot--blue" aria-hidden="true"></i> Appointment updates</span><span>In your dashboard</span></div>
+                    <div class="care-card__row"><span><i class="dot dot--gold" aria-hidden="true"></i> Health records</span><span>Role-scoped access</span></div>
+                </div>
+                <p class="form-hint mb-0 mt-3">Example labels only — no real patient information.</p>
+            </div>
         </div>
     </div>
-    <!-- Add CSS for hover state -->
-    <style>
-        .team-img img {
-            transition: transform 0.3s ease, filter 0.3s ease;
+</section>
+
+<section class="section" id="how-it-works">
+    <div class="container">
+        <div class="section-heading">
+            <span class="eyebrow">Designed around the workflow</span>
+            <h2>Simple steps. Clear responsibilities.</h2>
+            <p>The demonstration keeps the main tasks visible while limiting each role to its intended workspace.</p>
+        </div>
+        <div class="feature-grid">
+            <article class="feature-card">
+                <div class="feature-icon" aria-hidden="true">01</div>
+                <h3>Request a visit</h3>
+                <p>Patients can request a date with a clinician who has an assigned schedule, then follow the request from their own account.</p>
+            </article>
+            <article class="feature-card">
+                <div class="feature-icon" aria-hidden="true">02</div>
+                <h3>Review the schedule</h3>
+                <p>Clinicians see their own appointments, review pending requests, and update the appointment status.</p>
+            </article>
+            <article class="feature-card">
+                <div class="feature-icon" aria-hidden="true">03</div>
+                <h3>Keep records scoped</h3>
+                <p>Patient and clinician record views are filtered to the signed-in account and its authorized relationships.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section section--tint" id="care-team">
+    <div class="container">
+        <div class="section-heading">
+            <span class="eyebrow">Care team</span>
+            <h2>Meet the clinicians in this workspace.</h2>
+            <p>Clinician details are shown only when configured by an administrator. No contact details or profile photos are published here.</p>
+        </div>
+        @if (doctors.Count > 0)
+        {
+            <div class="doctor-grid">
+                @foreach (var doctor in doctors)
+                {
+                    var initials = string.Concat(doctor.FirstName?.FirstOrDefault(), doctor.LastName?.FirstOrDefault()).ToUpperInvariant();
+                    <article class="doctor-card">
+                        <div class="doctor-card__avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(initials) ? "CA" : initials)</div>
+                        <h3>Dr. @doctor.FirstName @doctor.LastName</h3>
+                        <p>@(doctor.SpecializationName ?? "Care team clinician")</p>
+                        @if (User.IsInRole(Role.Patient.ToString()))
+                        {
+                            <a class="button button--small" asp-controller="Patient" asp-action="GetDoctorDetails" asp-route-id="@doctor.Id">View availability <span aria-hidden="true">→</span></a>
+                        }
+                    </article>
+                }
+            </div>
         }
+        else
+        {
+            <div class="empty-state">Clinician profiles will appear here after an administrator configures them.</div>
+        }
+    </div>
+</section>
 
-            .team-img img:hover {
-                filter: brightness(0.9) saturate(1.1); /* Lighten the image slightly and apply a very light sky color */
-                transform: scale(1.05); /* Scale up the image slightly */
-                box-shadow: 0 4px 15px rgba(135, 206, 235, 0.5); /* Sky color shadow */
+<section class="section section--sand">
+    <div class="container">
+        <div class="callout">
+            <div>
+                <h2>Ready to see your own care workspace?</h2>
+                <p>Sign in to continue, or create a patient account to explore the demonstration workflow.</p>
+            </div>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="button button--primary" asp-controller="Account" asp-action="Profile">Manage your account</a>
             }
-
-            .team-img img.active {
-                filter: brightness(0.9) saturate(1.1); /* Maintain the light sky color effect when active */
-                transform: scale(1.05);
-                box-shadow: 0 4px 15px rgba(135, 206, 235, 0.5); /* Sky color shadow */
+            else
+            {
+                <a class="button button--primary" asp-controller="Account" asp-action="Register">Create patient account</a>
             }
-
-    </style>
-
-    <!-- Add team members   -->
-    <!-- Testimonial Start -->
-    <div id="rate" class="container-fluid testimonial py-5 wow zoomInDown" data-wow-delay="0.1s">
-        <div class="container py-5">
-            <div class="section-title mb-5">
-                <div class="sub-style">
-                    <h4 class="sub-title text-white px-3 mb-0">Testimonial</h4>
-                </div>
-                <h1 class="display-3 mb-4">What Clients are Saying</h1>
-            </div>
-            <div class="testimonial-carousel owl-carousel">
-                <div class="testimonial-item">
-                    <div class="testimonial-inner p-5">
-                        <div class="testimonial-inner-img mb-4">
-                            <img src="/img/testimonial-img.jpg" class="img-fluid rounded-circle" alt="">
-                        </div>
-                        <p class="text-white fs-7">
-                            "I had an amazing experience at the clinic! The therapists are highly skilled and provided personalized care that made all the difference in my recovery. I can't recommend them enough!"
-                        </p>
-                        <div class="text-center">
-                            <h5 class="mb-2">Sarah Johnson</h5>
-                            <p class="mb-2 text-white-50">Los Angeles, CA</p>
-                            <div class="d-flex justify-content-center">
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-item">
-                    <div class="testimonial-inner p-5">
-                        <div class="testimonial-inner-img mb-4">
-                            <img src="/img/testimonial-img.jpg" class="img-fluid rounded-circle" alt="">
-                        </div>
-                        <p class="text-white fs-7">
-                            "The facilities are top-notch, and the staff is incredibly supportive. My treatment plan was tailored specifically to my needs, and I felt cared for every step of the way."
-                        </p>
-                        <div class="text-center">
-                            <h5 class="mb-2">Michael Smith</h5>
-                            <p class="mb-2 text-white-50">Chicago, IL</p>
-                            <div class="d-flex justify-content-center">
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-item">
-                    <div class="testimonial-inner p-5">
-                        <div class="testimonial-inner-img mb-4">
-                            <img src="/img/testimonial-img.jpg" class="img-fluid rounded-circle" alt="">
-                        </div>
-                        <p class="text-white fs-7">
-                            "After my sessions, I noticed significant improvement in my mobility and pain levels. The team is professional and truly cares about their patients’ well-being."
-                        </p>
-                        <div class="text-center">
-                            <h5 class="mb-2">Emily Davis</h5>
-                            <p class="mb-2 text-white-50">Miami, FL</p>
-                            <div class="d-flex justify-content-center">
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                                <i class="fas fa-star text-secondary"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
+        <p class="form-hint mt-3">CareAxis is a software demonstration. It is not an emergency service and is not represented as legally or clinically certified.</p>
     </div>
-    <!-- Testimonial End -->
-    <!-- Blog Start -->
-    <div id="Blogs" class="container-fluid blog py-5">
-        <div class="container py-5">
-            <div class="section-title mb-5 wow fadeInUp" data-wow-delay="0.1s">
-                <div class="sub-style">
-                    <h4 class="sub-title px-3 mb-0">Our Blog</h4>
-                </div>
-                <h1 class="display-3 mb-4">Excellent Facility and High Quality Therapy</h1>
-                <p class="mb-0">Discover how our state-of-the-art facilities and dedicated therapists provide the best care for your rehabilitation needs. Our commitment to quality ensures that you receive the best treatment possible.</p>
-            </div>
-            <div class="row g-4 justify-content-center">
-                <div class="col-md-6 col-lg-6 col-xl-4 wow fadeInUp" data-wow-delay="0.1s">
-                    <div class="blog-item rounded">
-                        <div class="blog-img">
-                            <img src="/img/blog-1.jpg" class="img-fluid w-100" alt="Image">
-                        </div>
-                        <div class="blog-centent p-4">
-                            <div class="d-flex justify-content-between mb-4">
-                                <p class="mb-0 text-muted"><i class="fa fa-calendar-alt text-primary"></i> 01 Jan 2045</p>
-                            </div>
-                            <a class="h4">Remove Back Pain While Working on Your Physio</a>
-                            <p class="my-4">Back pain can be a common issue, especially for those who spend long hours at their desks. Our physiotherapy techniques can help alleviate discomfort and improve your posture, making your work environment more enjoyable.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-6 col-xl-4 wow fadeInUp" data-wow-delay="0.3s">
-                    <div class="blog-item rounded">
-                        <div class="blog-img">
-                            <img src="/img/blog-2.jpg" class="img-fluid w-100" alt="Image">
-                        </div>
-                        <div class="blog-centent p-4">
-                            <div class="d-flex justify-content-between mb-4">
-                                <p class="mb-0 text-muted"><i class="fa fa-calendar-alt text-primary"></i> 01 Jan 2045</p>
-                            </div>
-                            <a class="h4">Benefits of a Weekly Physiotherapy Session</a>
-                            <p class="my-4">Regular physiotherapy sessions can enhance recovery, prevent injuries, and improve overall health. Learn about how committing to a weekly session can make a significant difference in your life.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-6 col-xl-4 wow fadeInUp" data-wow-delay="0.5s">
-                    <div class="blog-item rounded">
-                        <div class="blog-img">
-                            <img src="/img/blog-3.jpg" class="img-fluid w-100" alt="Image">
-                        </div>
-                        <div class="blog-centent p-4">
-                            <div class="d-flex justify-content-between mb-4">
-                                <p class="mb-0 text-muted"><i class="fa fa-calendar-alt text-primary"></i> 01 Jan 2045</p>
-                            </div>
-                            <a class="h4">Regular Exercise Can Slow Ageing Process</a>
-                            <p class="my-4">Staying active is crucial for maintaining vitality as we age. Explore how regular exercise not only improves physical health but also boosts mental well-being and longevity.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-
-
-@section Footer {
-    <!-- Footer Start -->
-    <div id="Contact" class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.2s">
-        <div class="container py-5">
-            <div class="row g-5">
-                <div class="col-md-6 col-lg-6 col-xl-3">
-                    <div class="footer-item d-flex flex-column">
-                        <h4 class="text-white mb-4"><i class="fas fa-star-of-life me-3"></i>Hospital</h4>
-                        <p>
-                            Welcome to our Hospital, where we prioritize your health and well-being with compassionate care and advanced treatments.
-                        </p>
-
-                        <div class="d-flex align-items-center">
-                            <a href="https://www.facebook.com/profile.php?id=100082846263857" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                            <a href="https://x.com/Hospital1589816" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank">
-                                <i class="fab fa-twitter"></i>
-                            </a>
-
-                            <a href="https://www.instagram.com/hospitalpage/" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank"><i class="fab fa-instagram"></i></a>
-                            <a href="https://www.linkedin.com/in/el-hasaan-elsayed-8b7732305/" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank">
-                                <i class="fab fa-linkedin"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-6 col-xl-3">
-                    <div class="footer-item d-flex flex-column">
-                        <h4 class="mb-4 text-white">Quick Links</h4>
-                        <a href="#AboutUs"><i class="fas fa-angle-right me-2"></i> About Us</a>
-                        <a href="#services"><i class="fas fa-angle-right me-2"></i>Services</a>
-                        <a href="#choose"><i class="fas fa-angle-right me-2"></i>Why Choose our Hospital</a>
-                        <a href="#appointment"><i class="fas fa-angle-right me-2"></i>Appointment</a>
-                        <a href="#rate"><i class="fas fa-angle-right me-2"></i> Client Rate</a>
-                        <a href="#Blogs"><i class="fas fa-angle-right me-2"></i>Blogs</a>
-                        <a href="#doctors"><i class="fas fa-angle-right me-2"></i>Doctors</a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-6 col-xl-3">
-                    <div class="footer-item d-flex flex-column">
-                        <h4 class="mb-4 text-white">Contact Info</h4>
-                        <a href="https://www.google.com/maps?q=30.584991,31.486816" class="text-light me-4" target="_blank">
-                            <i class="fas fa-map-marker-alt text-primary me-2"></i>Find A Location
-                        </a>
-
-                        <a href="https://wa.me/201067450545" class="text-light me-4" target="_blank">
-                            <i class="fas fa-phone-alt text-primary me-2"></i>+201067450545
-                        </a>
-
-
-                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=hasaanelsayed86@gmail.com" class="text-light me-0" target="_blank">
-                            <i class="fas fa-envelope text-primary me-2"></i>Email Us
-                        </a>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Footer End -->
-    <!-- Back to Top -->
-    <a href="#" class="btn btn-primary btn-lg-square back-to-top"><i class="fa fa-arrow-up"></i></a>
-}
-    <!-- Blog End -->
-@section Scripts{
-        <!-- JavaScript Libraries -->
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="/lib/wow/wow.min.js"></script>
-        <script src="/lib/easing/easing.min.js"></script>
-        <script src="/lib/waypoints/waypoints.min.js"></script>
-        <script src="/lib/owlcarousel/owl.carousel.min.js"></script>
-
-        <!-- Template Javascript -->
-        <script src="/js/main.js"></script>
-}
-
+</section>

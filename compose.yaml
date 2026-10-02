@@ -1,0 +1,30 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: careaxis:local
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection:?Set a SQL Server connection string in the untracked .env file}
+      AllowedHosts: ${AllowedHosts:?Set an explicit host allowlist in the untracked .env file}
+      DataProtection__KeysPath: /var/lib/careaxis/keys
+      ForwardedHeaders__KnownProxies__0: ${ForwardedHeaders__KnownProxies__0:-}
+      EmailOptions__Enabled: ${EmailOptions__Enabled:-false}
+      EmailOptions__From: ${EmailOptions__From:-}
+      EmailOptions__SmtpServer: ${EmailOptions__SmtpServer:-}
+      EmailOptions__Port: ${EmailOptions__Port:-587}
+      EmailOptions__Password: ${EmailOptions__Password:-}
+      Auth__Google__ClientID: ${Auth__Google__ClientID:-}
+      Auth__Google__ClientSecret: ${Auth__Google__ClientSecret:-}
+    ports:
+      - "127.0.0.1:${CAREAXIS_HTTP_PORT:-8080}:8080"
+    volumes:
+      - data_protection_keys:/var/lib/careaxis/keys
+      - profile_images:/app/App_Data/profile-images
+    restart: unless-stopped
+
+volumes:
+  data_protection_keys:
+  profile_images:

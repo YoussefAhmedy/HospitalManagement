@@ -1,87 +1,116 @@
-﻿using Hospital.DAL.DataBase;
+using System.Data;
+using System.Linq.Expressions;
+using Hospital.DAL.DataBase;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Entities.OwnedTypes;
 using Hospital.DAL.Repository.Abstraction;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq.Expressions;
 
-namespace Hospital.DAL.Repository.Implementation
+namespace Hospital.DAL.Repository.Implementation;
+
+public sealed class AppointmentRepository(HospitalDbContext context) : IAppointmentRepository
 {
-    public class AppointmentRepository : IAppointmentRepository
+    public List<Appointment> GetAllAppointments() =>
+        context.Appointments
+            .AsNoTracking()
+            .Include(appointment => appointment.Patient)
+            .Include(appointment => appointment.Doctor)
+            .ToList();
+
+    public Task<Appointment?> GetAppointmentById(int id) =>
+        context.Appointments
+            .Include(appointment => appointment.Patient)
+            .Include(appointment => appointment.Doctor).ThenInclude(doctor => doctor!.Specialization)
+            .Include(appointment => appointment.Schedule).ThenInclude(schedule => schedule!.Shift)
+            .SingleOrDefaultAsync(appointment => appointment.AppointmentID == id);
+
+    public async Task AddAppointment(Appointment appointment)
     {
-        private readonly HospitalDbContext _context;
-
-        private bool disposed;
-        public AppointmentRepository(HospitalDbContext context)
+        if (string.IsNullOrWhiteSpace(appointment.DoctorID))
         {
-            _context = context;
+            throw new InvalidOperationException("An appointment must have a doctor.");
         }
 
-        public List<Appointment> GetAllAppointments()
+        var date = appointment.AppointmentDate.Date;
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var currentCount = await CountForDoctorOnDateAsync(appointment.DoctorID, date);
+        if (!AppointmentRules.HasDailyCapacity(currentCount))
         {
-            return _context.Appointments.Include(a => a.Patient).Include(a => a.Doctor).ToList();
+            throw new InvalidOperationException("The doctor has reached the daily appointment capacity.");
         }
 
-        public async Task<Appointment> GetAppointmentById(int id)
-        {
-            return await _context.Appointments.Include(a => a.Patient).Include(a => a.Doctor).Include(a => a.Schedule).SingleOrDefaultAsync(ap => ap.AppointmentID == id);
-        }
-
-        public async Task AddAppointment(Appointment appointment)
-        {
-            _context.Appointments.Add(appointment);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task UpdateAppointment(Appointment appointment)
-        {
-            _context.Appointments.Update(appointment);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task DeleteAppointment(int id)
-        {
-            var appointment = await GetAppointmentById(id);
-            if (appointment != null)
-            {
-                _context.Appointments.Remove(appointment);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposed)
-                return;
-            if (disposing)
-            {
-                _context.Dispose();
-            }
-
-            disposed = true;
-        }
-
-        public IEnumerable<Appointment> GetAppointments(Expression<Func<Appointment, bool>> predicate)
-        {
-             return _context.Appointments.Include(a => a.Doctor).Include(ap => ap.Patient).Include(app => app.Schedule)?.
-                ThenInclude(sch => sch.Shift).Where(predicate);
-        }
-
-        public void UpdateAppointmentStatus(Expression<Func<Appointment, bool>> predicate, AppointStatus Status)
-        {
-            
-                 _context.Appointments.Where(predicate).ExecuteUpdate(c => c.SetProperty(a => a.Status, app => Status));
-                
-            
-        }
+        context.Appointments.Add(appointment);
+        await context.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
+
+    public async Task UpdateAppointment(Appointment appointment)
+    {
+        if (string.IsNullOrWhiteSpace(appointment.DoctorID))
+        {
+            throw new InvalidOperationException("An appointment must have a doctor.");
+        }
+
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        if (appointment.Status is not (AppointStatus.Cancelled or AppointStatus.NotApproved))
+        {
+            var currentCount = await CountForDoctorOnDateAsync(
+                appointment.DoctorID, appointment.AppointmentDate.Date, appointment.AppointmentID);
+            if (!AppointmentRules.HasDailyCapacity(currentCount))
+            {
+                throw new InvalidOperationException("The doctor has reached the daily appointment capacity.");
+            }
+        }
+
+        context.Appointments.Update(appointment);
+        await context.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
+
+    public async Task<bool> DeleteAppointment(int id)
+    {
+        var appointment = await GetAppointmentById(id);
+        if (appointment is null)
+        {
+            return false;
+        }
+
+        context.Appointments.Remove(appointment);
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public Task<int> CountForDoctorOnDateAsync(string doctorId, DateTime date, int? excludeAppointmentId = null)
+    {
+        var start = date.Date;
+        var end = start.AddDays(1);
+        var query = context.Appointments.Where(appointment =>
+            appointment.DoctorID == doctorId &&
+            appointment.AppointmentDate >= start &&
+            appointment.AppointmentDate < end &&
+            appointment.Status != AppointStatus.Cancelled &&
+            appointment.Status != AppointStatus.NotApproved);
+
+        if (excludeAppointmentId.HasValue)
+        {
+            query = query.Where(appointment => appointment.AppointmentID != excludeAppointmentId.Value);
+        }
+
+        return query.CountAsync();
+    }
+
+    public IQueryable<Appointment> GetAppointments(Expression<Func<Appointment, bool>> predicate) =>
+        context.Appointments
+            .AsNoTracking()
+            .Include(appointment => appointment.Doctor)
+            .Include(appointment => appointment.Patient)
+            .Include(appointment => appointment.Schedule)!.ThenInclude(schedule => schedule!.Shift)
+            .Where(predicate);
+
+    public Task<int> UpdateAppointmentStatusAsync(
+        Expression<Func<Appointment, bool>> predicate,
+        AppointStatus status) =>
+        context.Appointments
+            .Where(predicate)
+            .ExecuteUpdateAsync(update => update.SetProperty(appointment => appointment.Status, status));
 }

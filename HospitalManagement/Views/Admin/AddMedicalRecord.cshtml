@@ -1,15 +1,13 @@
-﻿@model AddmedicalRecordVM
+@model AddmedicalRecordVM
 @{
     ViewData["Title"] = "Create medical";
-    Layout = "~/Views/Shared/Admin_Layout.cshtml";
+    Layout = "_MainLayout";
     SelectList DoctorselectListItems = new SelectList(Model.Doctors, "Id", "FirstName");
     SelectList PatientselectListItems = new SelectList(Model.patients, "Id", "FirstName");
 }
 
 @section Style {
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/css/newregister.css">
-}
+    }
 
 
 

@@ -1,4 +1,4 @@
-﻿using Hospital.BLL.Services.Abstraction;
+using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.Repository.Abstraction;
 using Hospital.DAL.Entities;
 using System.Linq.Expressions;
@@ -48,6 +48,11 @@ namespace Hospital.BLL.Services.Implementation
         public IEnumerable<Patient> GetAllPatients()
         {
             return _patientRepository.GetAllPatients();
+        }
+
+        public IQueryable<Patient> GetPatientsByIds(IReadOnlyCollection<string> patientIds)
+        {
+            return _patientRepository.GetPatientsByIds(patientIds);
         }
 
         public async Task<bool> UpdatePatient(Patient patient)

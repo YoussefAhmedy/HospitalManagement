@@ -1,7 +1,20 @@
-﻿@{
-    ViewData["Title"] = "Page Title";
-  
+@{
+    ViewData["Title"] = "Privacy information";
 }
+<section class="container legal-copy">
+    <span class="eyebrow">Project information</span>
+    <h1>Privacy and data use</h1>
+    <div class="notice-placeholder"><strong>Deployment notice required.</strong> This repository is a software demonstration, not a completed privacy notice or legal assessment.</div>
 
+    <h2>What the application can process</h2>
+    <p>The application includes account details, appointment requests, clinician schedules, medical-record fields, and operational audit metadata. Depending on deployment configuration, data may be stored in SQL Server, encrypted in a Hangfire email queue, and written to application logs. Do not enter real patient or production data into an unreviewed instance.</p>
 
+    <h2>Who is responsible</h2>
+    <p>The organization deploying and operating an instance must identify the applicable data controller or provider, explain the purpose and legal basis for processing, define retention and deletion periods, document vendors and transfers, provide a contact for privacy requests, and publish a jurisdiction-appropriate notice before collecting personal information.</p>
 
+    <h2>Technical controls are not a legal conclusion</h2>
+    <p>Authentication, authorization, audit metadata, transport settings, and other code-level safeguards do not by themselves establish HIPAA, GDPR, or any other regulatory compliance. Independent legal, privacy, security, and operational review is required for a real deployment.</p>
+
+    <h2>Questions</h2>
+    <p>This source repository does not provide a staffed support or privacy contact. Contact the administrator of the specific deployment through its established channel.</p>
+</section>

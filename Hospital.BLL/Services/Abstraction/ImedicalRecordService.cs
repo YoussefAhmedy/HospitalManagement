@@ -1,4 +1,4 @@
-﻿using Hospital.DAL.Entities;
+using Hospital.DAL.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,5 +15,7 @@ namespace Hospital.BLL.Services.Abstraction
         public Task<bool> AddMedicalRecord(MedicalRecord record);
 
         IEnumerable<MedicalRecord> GetDoctorMedicalRecords(Expression<Func<MedicalRecord, bool>> predicate);
+        IQueryable<MedicalRecord> GetForPatient(string patientId);
+        IQueryable<MedicalRecord> GetForDoctor(string doctorId);
     }
 }

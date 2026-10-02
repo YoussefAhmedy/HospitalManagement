@@ -1,4 +1,15 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
+(() => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (token && window.jQuery) {
+        window.jQuery.ajaxSetup({
+            headers: { RequestVerificationToken: token }
+        });
+    }
 
-// Write your JavaScript code.
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target.closest('[data-confirm]') : null;
+        if (target && !window.confirm(target.getAttribute('data-confirm') || 'Continue with this action?')) {
+            event.preventDefault();
+        }
+    });
+})();

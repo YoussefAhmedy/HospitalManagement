@@ -1,30 +1,25 @@
-﻿    using Hospital.DAL.Entities;
-    using Hospital.DAL.Entities.config;
-    using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-    using Microsoft.EntityFrameworkCore;
+using Hospital.DAL.Entities;
+using Hospital.DAL.Entities.config;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
-    namespace Hospital.DAL.DataBase
+namespace Hospital.DAL.DataBase;
+
+public class HospitalDbContext(DbContextOptions<HospitalDbContext> options)
+    : IdentityDbContext<ApplicationUser>(options)
+{
+    public DbSet<Doctor> Doctors => Set<Doctor>();
+    public DbSet<Admin> Admins => Set<Admin>();
+    public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<Schedule> Schedules => Set<Schedule>();
+    public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        public class HospitalDbContext : IdentityDbContext<ApplicationUser>
-        {
-            public HospitalDbContext(DbContextOptions<HospitalDbContext> opt) : base(opt) { }
-
-            public DbSet<Doctor> Doctors { get; set; }
-
-            public DbSet<Admin> Admins { get; set; }
-            public DbSet<Patient> Patients { get; set; }
-            public DbSet<MedicalRecord> MedicalRecords { get; set; }
-            public DbSet<Appointment> Appointments { get; set; }
-        public DbSet<Schedule> Schedules { get; set; }
-        public DbSet<Shift> Shifts { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-            {
-                base.OnModelCreating(modelBuilder);
-            //modelBuilder.ApplyConfigurationsFromAssembly(typeof(PatientConfig).Assembly);
-
-
-        }
-
-        }
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(HospitalDbContext).Assembly);
     }
+}

@@ -1,4 +1,5 @@
-﻿using Hospital.BLL.Services.Abstraction;
+using Hospital.BLL.ModelVM;
+using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Repository.Abstraction;
 using System;
@@ -21,6 +22,23 @@ namespace Hospital.BLL.Services.Implementation
         public List<Doctor> GetAllDoctors()
         {
            return doctorRepository.GetAllDoctors();
+        }
+
+        public List<PublicDoctorVm> GetPublicDoctorProfiles(int maximumResults)
+        {
+            var take = Math.Clamp(maximumResults, 1, 12);
+            return doctorRepository.GetPublicDoctors()
+                .OrderBy(doctor => doctor.FirstName)
+                .ThenBy(doctor => doctor.LastName)
+                .Take(take)
+                .Select(doctor => new PublicDoctorVm
+                {
+                    Id = doctor.Id,
+                    FirstName = doctor.FirstName,
+                    LastName = doctor.LastName,
+                    SpecializationName = doctor.Specialization == null ? null : doctor.Specialization.Name
+                })
+                .ToList();
         }
 
         public List<DoctorVm> GetDoctorVms()

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.vs
+**/bin
+**/obj
+**/TestResults
+**/coverage
+**/.env*
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/secrets.json
+**/*.pfx
+**/*.p12
+**/*.key
+**/*.pem
+**/App_Data
+**/uploads

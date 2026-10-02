@@ -1,16 +1,14 @@
-﻿@model CreateDoctorViewModel
+@model CreateDoctorViewModel
 @{
     ViewData["Title"] = "CreateDoctor";
-    Layout = "~/Views/Shared/Admin_Layout.cshtml";
+    Layout = "_MainLayout";
     SelectList selectListItems = new SelectList(Model.Specializations, "Id", "Name");
 }
 
 
     
 @section Style {
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="/css/newregister.css">
-}
+    }
 
 
 

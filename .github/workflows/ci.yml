@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore HospitalManagement.sln
+      - name: Build
+        run: dotnet build HospitalManagement.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test HospitalManagement.sln --configuration Release --no-build --verbosity normal

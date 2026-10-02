@@ -1,196 +1,367 @@
-﻿using AutoMapper;
-using Hangfire;
+using System.Security.Claims;
+using AutoMapper;
+using Hospital.BLL.Helpers;
 using Hospital.BLL.ModelVM;
+using Hospital.BLL.Notifications;
 using Hospital.BLL.Services.Abstraction;
-using Hospital.BLL.Services.Implementation;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Entities.OwnedTypes;
-using Hospital.DAL.Repository.Abstraction;
+using HospitalManagement.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using NuGet.Protocol.Plugins;
-using System.Security.Claims;
-using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 
-namespace HospitalManagement.Controllers
+namespace HospitalManagement.Controllers;
+
+[Authorize(Roles = "Doctor")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+public sealed class DoctorController : Controller
 {
-    [Authorize(Roles = "Doctor")]
-    public class DoctorController : Controller
+    private readonly IAppointmentService _appointmentService;
+    private readonly IScheduleService _scheduleService;
+    private readonly IEmailQueue _emailQueue;
+    private readonly IPatientService _patientService;
+    private readonly ImedicalRecordService _medicalRecordService;
+    private readonly IMapper _mapper;
+    private readonly IAuditLogger _auditLogger;
+    private readonly ILogger<DoctorController> _logger;
+
+    public DoctorController(
+        IAppointmentService appointmentService,
+        IScheduleService scheduleService,
+        IEmailQueue emailQueue,
+        IPatientService patientService,
+        ImedicalRecordService medicalRecordService,
+        IMapper mapper,
+        IAuditLogger auditLogger,
+        ILogger<DoctorController> logger)
     {
-        private readonly IAppointmentService appointmentService;
-        private readonly IRecurringJobManager recurringJobManager;
-        private readonly IScheduleService scheduleService;
-        private readonly IEmailSender sender;
-        private readonly IPatientService patientService;
-        private readonly ImedicalRecordService medicalRecordService;
-        private readonly IMapper mapper;
+        _appointmentService = appointmentService;
+        _scheduleService = scheduleService;
+        _emailQueue = emailQueue;
+        _patientService = patientService;
+        _medicalRecordService = medicalRecordService;
+        _mapper = mapper;
+        _auditLogger = auditLogger;
+        _logger = logger;
+    }
 
-        public DoctorController(IAppointmentService appointmentService,
-            IRecurringJobManager recurringJobManager,
-            IScheduleService scheduleService, 
-            IEmailSender sender,IPatientService patientService,
-            ImedicalRecordService medicalRecordService, IMapper mapper)
+    [HttpGet]
+    public async Task<IActionResult> Index()
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
         {
-            this.appointmentService = appointmentService;
-            this.recurringJobManager = recurringJobManager;
-            this.scheduleService = scheduleService;
-            this.sender = sender;
-            this.patientService = patientService;
-            this.medicalRecordService = medicalRecordService;
-            this.mapper = mapper;
+            return Challenge();
         }
 
-        public IActionResult GetAppointments()
-        {
-            recurringJobManager.AddOrUpdate("DailyNotApproved", () =>
-              appointmentService.UpdateAppointmentStatus(AppointStatus.NotApproved)
+        var today = DateTime.Today;
+        var appointments = _appointmentService.GetAppointments(appointment =>
+            appointment.DoctorID == doctorId && appointment.Status != AppointStatus.Cancelled);
+        var todayAppointments = await appointments
+            .Where(appointment => appointment.AppointmentDate >= today && appointment.AppointmentDate < today.AddDays(1))
+            .OrderBy(appointment => appointment.AppointmentDate)
+            .Take(20)
+            .ToListAsync();
+        var upcomingAppointments = await appointments
+            .Where(appointment => appointment.AppointmentDate >= today)
+            .OrderBy(appointment => appointment.AppointmentDate)
+            .Take(8)
+            .ToListAsync();
 
-            , Cron.Daily);   
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var  appointments = appointmentService.GetAppointments(appoint => appoint.DoctorID == userId && appoint.AppointmentDate.Date > DateTime.Now.Date);
-            return View(appointments);
+        await _auditLogger.RecordAsync("doctor.dashboard-viewed", doctorId, doctorId, "doctor-dashboard", doctorId);
+        return View(new DoctorDashboardVm
+        {
+            TodayAppointments = todayAppointments,
+            UpcomingAppointments = upcomingAppointments,
+            PendingAppointments = appointments.Count(appointment => appointment.Status == AppointStatus.Pending)
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAppointments()
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
         }
-        [HttpGet]
-        public async Task<IActionResult> EditAppointment(int id)
-        {
-            var appointment = await appointmentService.GetAppointmentById(id);
-            DoctorAppointmentApprovalVm doctorAppointmentApprovalVm = new DoctorAppointmentApprovalVm()
-            {
-                Status = (int)appointment.Status,
-                Id = appointment.AppointmentID
 
-            };
-            return View(doctorAppointmentApprovalVm);
+        await _auditLogger.RecordAsync("doctor.appointments-viewed", doctorId, doctorId, "appointments", doctorId);
+        var appointments = await _appointmentService.GetAppointments(appointment =>
+                appointment.DoctorID == doctorId && appointment.AppointmentDate >= DateTime.Today &&
+                appointment.Status != AppointStatus.Cancelled)
+            .OrderBy(appointment => appointment.AppointmentDate)
+            .Take(100)
+            .ToListAsync();
+        return View(appointments);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> EditAppointment(int id)
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
         }
 
-        [HttpPost]
-        
-        public async Task<IActionResult> EditAppointment(DoctorAppointmentApprovalVm Model)
+        var appointment = await _appointmentService.GetAppointmentById(id);
+        if (appointment is null || !ResourceOwnership.IsOwner(doctorId, appointment.DoctorID))
         {
-            if (ModelState.IsValid && Model.Id  != 0 && Model.Status != 0)
-            {
-                var appointment = await appointmentService.GetAppointmentById(Model.Id);
-
-                var docId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (Model.Status == (int)AppointStatus.Approved)
-                {
-                    var schedules =  scheduleService.GetDoctorSchedulesById(docId);
-                    if (schedules != null)
-                    {
-                        foreach (var sch in schedules)
-                        {
-                            if (sch.Day == appointment.AppointmentDate.DayOfWeek && appointmentService.GetAppointments(app =>
-                                app.AppointmentDate == appointment.AppointmentDate).Count() < 50)
-                            {
-                                appointment.Schedule = sch;
-                                appointment.ScheduleId = sch.Id;
-                                appointment.Status = (AppointStatus)Model.Status;
-                                await appointmentService.UpdateAppointment(appointment);
-                                await sender.send(appointment.Patient.Email, "Your appointment Approval",
-                                    $"your appointment is accepted Date {appointment.AppointmentDate}  " +
-                                    $"\nDay {appointment.AppointmentDate} " +
-                                    $"\n {sch.Shift.ShiftType} From {sch.Shift.StartTIme} to {sch.Shift.EndTIme}");
-                                return RedirectToAction("GetAppointments");
-                            }
-                        }
-                        
-                        ModelState.AddModelError(string.Empty,"can't add this appointment");
-                    }
-                    else
-                        ModelState.AddModelError(string.Empty, "there no shift in this date");
-                }
-                else
-                {
-                    appointment.Status = (AppointStatus)Model.Status;
-                    await appointmentService.UpdateAppointment(appointment);
-                    return RedirectToAction("GetAppointments");
-                }
-                
-            }
-            Model.Id = Model.Id;
-            return View(Model);
-
+            await _auditLogger.RecordAsync("security.doctor-appointment-access-denied", doctorId,
+                appointment?.PatientID, "appointment", id.ToString());
+            return NotFound();
         }
-        public IActionResult GetMedicalRecords()
+
+        await _auditLogger.RecordAsync("doctor.appointment-viewed", doctorId,
+            appointment.PatientID, "appointment", appointment.AppointmentID.ToString());
+        return View(new DoctorAppointmentApprovalVm
         {
-            var model = medicalRecordService.
-                GetDoctorMedicalRecords(p => p.DoctorID == User.FindFirstValue(ClaimTypes.NameIdentifier))
-                .OrderByDescending(m => m.RecordDate).Take(15).ToList();
+            Status = (int)appointment.Status,
+            Id = appointment.AppointmentID
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> EditAppointment(DoctorAppointmentApprovalVm model)
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
+        }
+        if (!ModelState.IsValid || model.Id <= 0 || !AppointmentRules.IsValidStatus(model.Status))
+        {
+            ModelState.AddModelError(string.Empty, "Choose a valid appointment action.");
             return View(model);
         }
 
-        public IActionResult AddMedicalRecord()
+        var appointment = await _appointmentService.GetAppointmentById(model.Id);
+        if (appointment is null || !ResourceOwnership.IsOwner(doctorId, appointment.DoctorID))
         {
-            var CreateMedicalRecord = new AddMedicalRecordByDoctorVm()
-            {
-                patients = patientService.GetAllPatients(),
-
-            };
-
-            return View(CreateMedicalRecord);
+            await _auditLogger.RecordAsync("security.doctor-appointment-update-denied", doctorId,
+                appointment?.PatientID, "appointment", model.Id.ToString());
+            return NotFound();
+        }
+        if (appointment.Status == AppointStatus.Cancelled || appointment.AppointmentDate.Date < DateTime.Today)
+        {
+            return Conflict("This appointment is no longer editable.");
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AddMedicalRecord(AddMedicalRecordByDoctorVm addmedicalRecordVM)
+        var requestedStatus = (AppointStatus)model.Status;
+        if (requestedStatus is not (AppointStatus.Approved or AppointStatus.NotApproved))
         {
-            if (ModelState.IsValid)
+            ModelState.AddModelError(nameof(model.Status), "Choose approve or decline.");
+            return View(model);
+        }
+
+        if (requestedStatus == AppointStatus.Approved)
+        {
+            var schedule = _scheduleService.GetDoctorSchedulesById(doctorId)
+                .FirstOrDefault(candidate => candidate.Status == Status.Assigned &&
+                    AppointmentRules.IsScheduledForDate(appointment.AppointmentDate, candidate.Day));
+            if (schedule is null)
             {
-                var medicalRecord = mapper.Map<MedicalRecord>(addmedicalRecordVM);
-                medicalRecord.DoctorID = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                
-                if (await medicalRecordService.AddMedicalRecord(medicalRecord))
-                {
-                    return RedirectToAction("GetMedicalRecords");
-                }
-                ModelState.AddModelError(string.Empty, "can not add this record try again ");
+                ModelState.AddModelError(string.Empty, "No assigned schedule matches this appointment date.");
+                return View(model);
             }
 
-            addmedicalRecordVM.patients = patientService.GetAllPatients();
-            
-            return View("AddMedicalRecord", addmedicalRecordVM);
-        }
-        [HttpGet]
+            var otherBookings = await _appointmentService.CountForDoctorOnDateAsync(
+                doctorId, appointment.AppointmentDate, appointment.AppointmentID);
+            if (!AppointmentRules.HasDailyCapacity(otherBookings))
+            {
+                ModelState.AddModelError(string.Empty, "The clinician's daily appointment capacity has been reached.");
+                return View(model);
+            }
 
-        public IActionResult GetRecords(int num)
+            appointment.Schedule = schedule;
+            appointment.ScheduleId = schedule.Id;
+        }
+
+        appointment.Status = requestedStatus;
+        if (!await _appointmentService.UpdateAppointment(appointment))
         {
-            var model = medicalRecordService.
-                GetDoctorMedicalRecords(p => p.DoctorID == User.FindFirstValue(ClaimTypes.NameIdentifier))
-                .Select( m => 
-                
-                     new MedicalRecordVMByAj
-                    {
-                         Diagnosis = m.Diagnosis,
-                         Treatment = m.Treatment,
-                        RecordDate  = m.RecordDate.Date,
-                         FullName = m.Patient?.FirstName+  m.Patient?.LastName,
-                         Email = m.Patient?.Email,
-                         Phone = m.Patient?.PhoneNumber
-                    }
-                
-                ).OrderByDescending(m => m.RecordDate).Take(num).ToArray();
-            return Ok(model);
+            ModelState.AddModelError(string.Empty, "The appointment changed while you were viewing it. Refresh and try again.");
+            return View(model);
         }
 
-        public IActionResult GetAppoints(int num)
+        var eventType = requestedStatus == AppointStatus.Approved
+            ? "doctor.appointment-approved"
+            : "doctor.appointment-declined";
+        await _auditLogger.RecordAsync(eventType, doctorId, appointment.PatientID,
+            "appointment", appointment.AppointmentID.ToString());
+
+        var emailQueued = false;
+        if (appointment.Patient?.Email is { Length: > 0 } patientEmail)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var appointments = appointmentService
-                .GetAppointments(appoint => appoint.DoctorID == userId 
-                && appoint.AppointmentDate.Date > DateTime.Now.Date).
-                Select(ap => new AppointVmByAj
-                {
-                    FullName = ap.Patient?.FirstName + " " + ap.Patient.LastName,
-                    Date = ap.AppointmentDate.Date,
-                    Notes = ap.Notes,
-                    AppointId = ap.Status == AppointStatus.Approved ? ap.AppointmentID.ToString() : ap.Status.ToString(),
-                    Status = ap.Status.ToString(),
-                    Id = ap.AppointmentID
-
-
-                })
-                .OrderByDescending(a => a.Date).Take(num).ToArray();
-            return Ok(appointments);
+            emailQueued = _emailQueue.TryEnqueue(
+                patientEmail,
+                "Appointment status updated",
+                EmailTemplates.AppointmentUpdate(
+                    appointment.Patient.FirstName,
+                    requestedStatus == AppointStatus.Approved ? "approved" : "not approved",
+                    appointment.AppointmentDate.ToString("D")));
         }
+
+        TempData["StatusMessage"] = emailQueued
+            ? "Appointment status updated. The patient notification has been queued."
+            : "Appointment status updated. Email delivery is not configured; the patient will see the update in their dashboard.";
+        return RedirectToAction(nameof(GetAppointments));
     }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMedicalRecords()
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
+        }
+
+        await _auditLogger.RecordAsync("doctor.medical-records-viewed", doctorId, doctorId,
+            "medical-records", doctorId);
+        var records = await _medicalRecordService.GetForDoctor(doctorId)
+            .OrderByDescending(record => record.RecordDate)
+            .Take(100)
+            .ToListAsync();
+        return View(records);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> AddMedicalRecord()
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
+        }
+
+        var model = new AddMedicalRecordByDoctorVm
+        {
+            patients = await GetAssignedPatientsAsync(doctorId)
+        };
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddMedicalRecord(AddMedicalRecordByDoctorVm model)
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
+        }
+
+        if (!ModelState.IsValid)
+        {
+            model.patients = await GetAssignedPatientsAsync(doctorId);
+            return View(model);
+        }
+
+        var hasAuthorizedRelationship = await _appointmentService.GetAppointments(appointment =>
+                appointment.DoctorID == doctorId &&
+                appointment.PatientID == model.PatientId &&
+                appointment.Status == AppointStatus.Approved)
+            .AnyAsync();
+        if (!hasAuthorizedRelationship)
+        {
+            await _auditLogger.RecordAsync("security.doctor-record-create-denied", doctorId,
+                model.PatientId, "medical-record", null);
+            return NotFound();
+        }
+
+        if (model.RecordDate.Date > DateTime.Today)
+        {
+            ModelState.AddModelError(nameof(model.RecordDate), "A medical note cannot be dated in the future.");
+            model.patients = await GetAssignedPatientsAsync(doctorId);
+            return View(model);
+        }
+
+        var record = _mapper.Map<MedicalRecord>(model);
+        record.RecordDate = model.RecordDate.Date;
+        record.DoctorID = doctorId;
+        record.PatientID = model.PatientId;
+        if (!await _medicalRecordService.AddMedicalRecord(record))
+        {
+            _logger.LogError("A medical record could not be saved.");
+            ModelState.AddModelError(string.Empty, "The note could not be saved. Please try again.");
+            model.patients = await GetAssignedPatientsAsync(doctorId);
+            return View(model);
+        }
+
+        await _auditLogger.RecordAsync("doctor.medical-record-created", doctorId,
+            record.PatientID, "medical-record", record.MedicalRecordID.ToString());
+        TempData["StatusMessage"] = "Clinical note saved.";
+        return RedirectToAction(nameof(GetMedicalRecords));
+    }
+
+    [HttpGet]
+    [EnableRateLimiting("public-search")]
+    public async Task<IActionResult> GetRecords(int num)
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
+        }
+
+        var limit = Math.Clamp(num, 1, 50);
+        var records = await _medicalRecordService.GetForDoctor(doctorId)
+            .OrderByDescending(record => record.RecordDate)
+            .Take(limit)
+            .Select(record => new MedicalRecordVMByAj
+            {
+                Diagnosis = record.Diagnosis,
+                Treatment = record.Treatment,
+                RecordDate = record.RecordDate.Date,
+                FullName = $"{record.Patient!.FirstName} {record.Patient.LastName}"
+            })
+            .ToListAsync();
+        return Ok(records);
+    }
+
+    [HttpGet]
+    [EnableRateLimiting("public-search")]
+    public async Task<IActionResult> GetAppoints(int num)
+    {
+        var doctorId = CurrentUserId();
+        if (doctorId is null)
+        {
+            return Challenge();
+        }
+
+        var limit = Math.Clamp(num, 1, 50);
+        var appointments = await _appointmentService.GetAppointments(appointment =>
+                appointment.DoctorID == doctorId && appointment.AppointmentDate >= DateTime.Today)
+            .OrderBy(appointment => appointment.AppointmentDate)
+            .Take(limit)
+            .Select(appointment => new AppointVmByAj
+            {
+                FullName = $"{appointment.Patient!.FirstName} {appointment.Patient.LastName}",
+                Date = appointment.AppointmentDate.Date,
+                Notes = appointment.Notes,
+                AppointId = appointment.Status == AppointStatus.Approved
+                    ? appointment.AppointmentID.ToString()
+                    : appointment.Status.ToString(),
+                Status = appointment.Status.ToString(),
+                Id = appointment.AppointmentID
+            })
+            .ToListAsync();
+        return Ok(appointments);
+    }
+
+    private async Task<IReadOnlyList<Patient>> GetAssignedPatientsAsync(string doctorId)
+    {
+        var patientIds = await _appointmentService.GetAppointments(appointment =>
+                appointment.DoctorID == doctorId && appointment.Status == AppointStatus.Approved)
+            .Select(appointment => appointment.PatientID!)
+            .Where(patientId => patientId != null)
+            .Distinct()
+            .ToListAsync();
+        return await _patientService.GetPatientsByIds(patientIds).ToListAsync();
+    }
+
+    private string? CurrentUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
 }

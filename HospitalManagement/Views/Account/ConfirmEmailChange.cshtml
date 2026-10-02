@@ -1,0 +1,19 @@
+@model EmailChangeConfirmationVm
+@{
+    ViewData["Title"] = "Confirm your email change";
+    ViewData["BodyClass"] = "auth-page";
+    ViewData["MainClass"] = "auth-main";
+}
+
+<section class="auth-card" aria-labelledby="email-change-heading">
+    <span class="eyebrow">Account security</span>
+    <h1 id="email-change-heading">Confirm this email address</h1>
+    <p class="auth-card__lead">Confirm that you control <strong>@Model.NewEmail</strong>. Your email address will be updated only after this step.</p>
+    <form asp-action="ConfirmEmailChange" asp-controller="Account" method="post">
+        <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+        <input type="hidden" asp-for="NewEmail" />
+        <input type="hidden" asp-for="Code" />
+        <button class="button button--primary" type="submit">Confirm email change</button>
+        <a class="button" asp-controller="Account" asp-action="Profile">Cancel</a>
+    </form>
+</section>

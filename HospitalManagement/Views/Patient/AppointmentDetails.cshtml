@@ -1,4 +1,4 @@
-﻿@using Hospital.BLL.Helpers
+@using Hospital.BLL.Helpers
 @model AppointmentVm
 @{
     ViewData["Title"] = "AppointmentDetails";
@@ -6,66 +6,9 @@
 }
 
 @section Style {
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/css/newregister.css">
-    <link href="~/css/appointment.css" rel="stylesheet" />
-    <link href="~/css/cardstyle.css" rel="stylesheet" />
-    <link href="~/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="~/css/style.css" rel="stylesheet" />
-    <link href="~/css/site.css" rel="stylesheet" />
-}
-@section Header
-{
-    <!-- Navbar Start -->
-    <div class="container-fluid position-relative p-0">
-        <nav class="navbar navbar-expand-lg navbar-light bg-white px-4 px-lg-5 py-3 py-lg-0">
-            <a asp-action="Index" asp-controller="Home" class="navbar-brand p-0">
-                <h1 class="text-primary m-0"><i class="fas fa-star-of-life me-3"></i>Hospital</h1>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-                <span class="fa fa-bars"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarCollapse">
-                <div class="navbar-nav ms-auto py-0">
-                    <a href="#AboutUs" class="nav-item nav-link">About Us</a>
-
-                    @if (!User.Identity.IsAuthenticated)
-                    {
-                        <a href="#services" class="nav-item nav-link">Services</a>
-                        <a href="#doctors" class="nav-item nav-link">Our Doctors</a>
-                    }
-                    <a href="#Contact" class="nav-item nav-link">Contact</a>
-
-                    @if (User.Identity.IsAuthenticated && User.IsInRole(Role.Patient.ToString()))
-                    {
-                        <a asp-action="GetMedicalRecords" asp-controller="Patient" class="nav-item nav-link">My Medical Records</a>
-                        <a asp-action="ListAppointments" asp-controller="Patient" class="nav-item nav-link">My Appointments</a>
-                        <a asp-action="AddAppointment" asp-controller="Patient" class="nav-item nav-link">Request Appointment</a>
-                    }
-
-                    @if (User.IsInRole(Role.Doctor.ToString()))
-                    {
-                        <a asp-action="GetAppointments" asp-controller="Doctor" class="nav-item nav-link">Booked Appointments</a>
-                        <a asp-action="AddMedicalRecord" asp-controller="Doctor" class="nav-item nav-link">Add Record</a>
-                        <a asp-action="GetMedicalRecords" asp-controller="Doctor" class="nav-item nav-link">Records</a>
-                    }
-                </div>
-
-                <div class="auth-buttons">
-                    @if (User?.Identity?.IsAuthenticated ?? false)
-                    {
-                        <a asp-action="LogOut" asp-controller="Account" class="btn btn-primary rounded-pill text-white py-2 px-4">Log out</a>
-                    }
-                    else
-                    {
-                        <a asp-action="LogIn" asp-controller="Account" class="btn btn-primary rounded-pill text-white py-2 px-4">Login</a>
-                        <a asp-action="Register" asp-controller="Account" class="btn btn-primary rounded-pill text-white py-2 px-4">Create Account</a>
-                    }
-                </div>
-            </div>
-        </nav>
-    </div>
-    <!-- Navbar End -->
+    }
+@section Header {
+    <partial name="_MainNavigation" />
 }
 <div class="container">
     <div class="form-section">
@@ -135,72 +78,9 @@
         </form>
     </div>
 </div>
-@section Footer {
-    <!-- Footer Start -->
-    <div id="Contact" class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.2s">
-        <div class="container py-5">
-            <div class="row g-5">
-                <div class="col-md-6 col-lg-6 col-xl-3">
-                    <div class="footer-item d-flex flex-column">
-                        <h4 class="text-white mb-4"><i class="fas fa-star-of-life me-3"></i>Hospital</h4>
-                        <p>
-                            Welcome to our Hospital, where we prioritize your health and well-being with compassionate care and advanced treatments.
-                        </p>
 
-                        <div class="d-flex align-items-center">
-                            <a href="https://www.facebook.com/profile.php?id=100082846263857" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                            <a href="https://x.com/Hospital1589816" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank">
-                                <i class="fab fa-twitter"></i>
-                            </a>
-
-                            <a href="https://www.instagram.com/hospitalpage/" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank"><i class="fab fa-instagram"></i></a>
-                            <a href="https://www.linkedin.com/in/el-hasaan-elsayed-8b7732305/" class="btn btn-light btn-square border rounded-circle nav-fill me-3" target="_blank">
-                                <i class="fab fa-linkedin"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-6 col-xl-3">
-                    <div class="footer-item d-flex flex-column">
-                        <h4 class="mb-4 text-white">Quick Links</h4>
-                        <a href="#AboutUs"><i class="fas fa-angle-right me-2"></i> About Us</a>
-                        <a href="#services"><i class="fas fa-angle-right me-2"></i>Services</a>
-                        <a href="#choose"><i class="fas fa-angle-right me-2"></i>Why Choose our Hospital</a>
-                        <a href="#appointment"><i class="fas fa-angle-right me-2"></i>Appointment</a>
-                        <a href="#rate"><i class="fas fa-angle-right me-2"></i> Client Rate</a>
-                        <a href="#Blogs"><i class="fas fa-angle-right me-2"></i>Blogs</a>
-                        <a href="#doctors"><i class="fas fa-angle-right me-2"></i>Doctors</a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-6 col-xl-3">
-                    <div class="footer-item d-flex flex-column">
-                        <h4 class="mb-4 text-white">Contact Info</h4>
-                        <a href="https://www.google.com/maps?q=30.584991,31.486816" class="text-light me-4" target="_blank">
-                            <i class="fas fa-map-marker-alt text-primary me-2"></i>Find A Location
-                        </a>
-
-                        <a href="https://wa.me/201067450545" class="text-light me-4" target="_blank">
-                            <i class="fas fa-phone-alt text-primary me-2"></i>+201067450545
-                        </a>
-
-
-                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=hasaanelsayed86@gmail.com" class="text-light me-0" target="_blank">
-                            <i class="fas fa-envelope text-primary me-2"></i>Email Us
-                        </a>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Footer End -->
-    <!-- Back to Top -->
-    <a href="#" class="btn btn-primary btn-lg-square back-to-top"><i class="fa fa-arrow-up"></i></a>
-}
 
 @section Scripts {
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     @{
         
         await Html.RenderPartialAsync("_ValidationScriptsPartial");

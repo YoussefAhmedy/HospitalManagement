@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authentication;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,5 +22,7 @@ namespace Hospital.BLL.ModelVM
         public bool RememberMe { get; set; }
 
         public string? ReturnUrl { get ; set; }
+
+        public IList<AuthenticationScheme>? ExternalLogins { get; set; }
     }
 }

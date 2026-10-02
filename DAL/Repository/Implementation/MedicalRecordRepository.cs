@@ -1,83 +1,91 @@
-﻿using Hospital.DAL.DataBase;
+using System.Linq.Expressions;
+using Hospital.DAL.DataBase;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Repository.Abstraction;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 
-namespace Hospital.DAL.Repository.Implementation
+namespace Hospital.DAL.Repository.Implementation;
+
+public sealed class MedicalRecordRepository(HospitalDbContext context) : IMedicalRecordRepository
 {
-    public class MedicalRecordRepository : IMedicalRecordRepository
+    private bool _disposed;
+
+    public IEnumerable<MedicalRecord> GetAllMedicalRecords() =>
+        context.MedicalRecords
+            .AsNoTracking()
+            .Include(record => record.Patient)
+            .Include(record => record.Doctor).ThenInclude(doctor => doctor!.Specialization);
+
+    public MedicalRecord? GetMedicalRecordById(int id) =>
+        context.MedicalRecords
+            .Include(record => record.Patient)
+            .Include(record => record.Doctor)
+            .FirstOrDefault(record => record.MedicalRecordID == id);
+
+    public async Task<bool> AddMedicalRecord(MedicalRecord medicalRecord)
     {
-        private readonly HospitalDbContext _context;
-        private bool disposed;
-        public MedicalRecordRepository(HospitalDbContext context)
+        try
         {
-            _context = context;
+            await context.MedicalRecords.AddAsync(medicalRecord);
+            await context.SaveChangesAsync();
+            return true;
         }
-
-        public IEnumerable<MedicalRecord> GetAllMedicalRecords()
+        catch
         {
-            return _context.MedicalRecords.Include(m => m.Patient).Include(m => m.Doctor)?.ThenInclude(d => d.Specialization);
+            return false;
         }
+    }
 
-        public MedicalRecord GetMedicalRecordById(int id)
+    public void UpdateMedicalRecord(MedicalRecord medicalRecord)
+    {
+        context.MedicalRecords.Update(medicalRecord);
+        context.SaveChanges();
+    }
+
+    public void DeleteMedicalRecord(int id)
+    {
+        var medicalRecord = GetMedicalRecordById(id);
+        if (medicalRecord is not null)
         {
-            return _context.MedicalRecords.Include(m => m.Patient).Include(m => m.Doctor)
-                                           .FirstOrDefault(m => m.MedicalRecordID == id);
+            context.MedicalRecords.Remove(medicalRecord);
+            context.SaveChanges();
         }
+    }
 
-        public async Task<bool> AddMedicalRecord(MedicalRecord medicalRecord)
+    public IEnumerable<MedicalRecord> GetDoctorMedicalRecords(Expression<Func<MedicalRecord, bool>> predicate) =>
+        context.MedicalRecords
+            .AsNoTracking()
+            .Include(record => record.Patient)
+            .Where(predicate);
+
+    public IQueryable<MedicalRecord> GetForPatient(string patientId) =>
+        context.MedicalRecords
+            .AsNoTracking()
+            .Where(record => record.PatientID == patientId)
+            .Include(record => record.Doctor).ThenInclude(doctor => doctor!.Specialization);
+
+    public IQueryable<MedicalRecord> GetForDoctor(string doctorId) =>
+        context.MedicalRecords
+            .AsNoTracking()
+            .Where(record => record.DoctorID == doctorId)
+            .Include(record => record.Patient);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
         {
-            try
-            {
-                await _context.MedicalRecords.AddAsync(medicalRecord);
-                _context.SaveChanges();
-                return true;
-            }
-            catch { return false; }
-            
+            return;
         }
-
-        public void UpdateMedicalRecord(MedicalRecord medicalRecord)
+        if (disposing)
         {
-            _context.MedicalRecords.Update(medicalRecord);
-            _context.SaveChanges();
+            context.Dispose();
         }
-
-        public void DeleteMedicalRecord(int id)
-        {
-            var medicalRecord = GetMedicalRecordById(id);
-            if (medicalRecord != null)
-            {
-                _context.MedicalRecords.Remove(medicalRecord);
-                _context.SaveChanges();
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposed)
-                return;
-            if (disposing)
-            {
-                _context.Dispose();
-            }
-
-            disposed = true;
-        }
-
-        public IEnumerable<MedicalRecord> GetDoctorMedicalRecords(Expression<Func<MedicalRecord, bool>> predicate)
-        {
-            return _context.MedicalRecords.Include(m => m.Patient).Where(predicate);
-        }
+        _disposed = true;
     }
 }

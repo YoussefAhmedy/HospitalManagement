@@ -1,78 +1,64 @@
-﻿using Hospital.BLL.Services.Abstraction;
+using System.Linq.Expressions;
+using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Entities.OwnedTypes;
 using Hospital.DAL.Repository.Abstraction;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Hospital.BLL.Services.Implementation
+namespace Hospital.BLL.Services.Implementation;
+
+public sealed class AppointmentService(IAppointmentRepository appointmentRepository) : IAppointmentService
 {
-    public class AppointmentService : IAppointmentService
+    public async Task<bool> AddAppointment(Appointment appointment)
     {
-        private readonly IAppointmentRepository appointmentRepository;
-
-        public AppointmentService(IAppointmentRepository appointmentRepository)
+        try
         {
-            this.appointmentRepository = appointmentRepository;
+            await appointmentRepository.AddAppointment(appointment);
+            return true;
         }
-        public async Task<bool> AddAppointment(Appointment appointment)
+        catch
         {
-            try
-            {
-                await appointmentRepository.AddAppointment(appointment);
-                return true;
-
-            }
-            catch
-            {
-                return false;
-            }
+            return false;
         }
+    }
 
-        public async Task<bool> DeleteAppointment(int id)
+    public IQueryable<Appointment> GetAppointments(Expression<Func<Appointment, bool>> predicate) =>
+        appointmentRepository.GetAppointments(predicate);
+
+    public Task<Appointment?> GetAppointmentById(int id) =>
+        appointmentRepository.GetAppointmentById(id);
+
+    public Task<int> CountForDoctorOnDateAsync(string doctorId, DateTime date, int? excludeAppointmentId = null) =>
+        appointmentRepository.CountForDoctorOnDateAsync(doctorId, date, excludeAppointmentId);
+
+    public async Task<bool> DeleteAppointment(int id)
+    {
+        try
         {
-            try
-            {
-                await appointmentRepository.DeleteAppointment(id);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-
+            return await appointmentRepository.DeleteAppointment(id);
         }
-
-        public async Task<Appointment> GetAppointmentById(int id)
+        catch
         {
-            return await appointmentRepository.GetAppointmentById(id);
+            return false;
         }
+    }
 
-        public IEnumerable<Appointment> GetAppointments(Expression<Func<Appointment, bool>> predicate)
+    public async Task<bool> UpdateAppointment(Appointment appointment)
+    {
+        try
         {
-            return appointmentRepository.GetAppointments(predicate);
+            await appointmentRepository.UpdateAppointment(appointment);
+            return true;
         }
+        catch
+        {
+            return false;
+        }
+    }
 
-        public async Task<bool> UpdateAppointment(Appointment appointment)
-        {
-            try
-            {
-               await appointmentRepository.UpdateAppointment(appointment);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public void UpdateAppointmentStatus(AppointStatus Status)
-        {
-             appointmentRepository.UpdateAppointmentStatus(p => p.AppointmentDate < DateTime.Now, Status);
-        }
+    public async Task UpdateAppointmentStatus(AppointStatus status)
+    {
+        await appointmentRepository.UpdateAppointmentStatusAsync(
+            appointment => appointment.Status == AppointStatus.Pending && appointment.AppointmentDate < DateTime.Today,
+            status);
     }
 }

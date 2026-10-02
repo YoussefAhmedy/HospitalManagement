@@ -1,19 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace Hospital.BLL.Helpers;
 
-namespace Hospital.BLL.Helpers
+public sealed class EmailOptions
 {
-    public class EmailOptions
-    {
-        public string From { get; set; }
-
-        public string Password { get; set; }
-
-        public string SmtpServer { get; set; }
-
-        public int Port { get; set; }
-    }
+    public bool Enabled { get; set; }
+    public string From { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string SmtpServer { get; set; } = string.Empty;
+    public int Port { get; set; } = 587;
 }

@@ -1,14 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace Hospital.BLL.Services.Abstraction;
 
-namespace Hospital.BLL.Services.Abstraction
+/// <summary>Provider-level email delivery. Failures are thrown so a background processor can retry.</summary>
+public interface IEmailSender
 {
-    public interface IEmailSender
-    {
-        Task<bool> send(string to, string subject, string message);
-    }
+    Task SendAsync(string to, string subject, string htmlBody);
 }

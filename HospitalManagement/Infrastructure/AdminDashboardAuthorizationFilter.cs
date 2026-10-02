@@ -8,4 +8,3 @@ public sealed class AdminDashboardAuthorizationFilter : IDashboardAuthorizationF
         context.GetHttpContext().User.Identity?.IsAuthenticated == true &&
         context.GetHttpContext().User.IsInRole("Admin");
 }
-}

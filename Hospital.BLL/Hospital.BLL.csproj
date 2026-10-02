@@ -2,9 +2,12 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" />
     <PackageReference Include="MailKit" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

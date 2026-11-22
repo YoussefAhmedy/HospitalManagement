@@ -12,9 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v7
+        uses: actions/checkout@v5
       - name: Install .NET 10 SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: Restore
@@ -23,3 +23,48 @@ jobs:
         run: dotnet build HospitalManagement.sln --configuration Release --no-restore
       - name: Test
         run: dotnet test HospitalManagement.sln --configuration Release --no-build --verbosity normal
+
+  migrations:
+    # Generates the EF Core migration from the model so the database schema is never
+    # hand-authored, and uploads it for review. Runs after a green build.
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore tools and packages
+        run: |
+          dotnet tool restore
+          dotnet restore HospitalManagement.sln
+      - name: Scaffold migration from the model
+        run: >
+          dotnet ef migrations add InitialSchema
+          --project DAL/Hospital.DAL.csproj
+          --startup-project HospitalManagement/HospitalManagement.csproj
+          --output-dir Migrations
+      - name: List migrations
+        run: >
+          dotnet ef migrations list
+          --project DAL/Hospital.DAL.csproj
+          --startup-project HospitalManagement/HospitalManagement.csproj
+          --no-connect
+      - name: Generate idempotent SQL script
+        run: >
+          dotnet ef migrations script --idempotent
+          --project DAL/Hospital.DAL.csproj
+          --startup-project HospitalManagement/HospitalManagement.csproj
+          --output "${{ runner.temp }}/careaxis-schema.sql"
+      - name: Upload migration artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: ef-migrations
+          path: |
+            DAL/Migrations/**
+            ${{ runner.temp }}/careaxis-schema.sql
+          if-no-files-found: error
+          retention-days: 14

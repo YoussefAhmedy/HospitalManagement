@@ -4,16 +4,20 @@ using Hangfire;
 using Hangfire.Dashboard;
 using Hospital.BLL.Helpers;
 using Hospital.BLL.Mappers;
+using Hospital.BLL.Permissions;
 using Hospital.BLL.Services.Abstraction;
 using Hospital.BLL.Services.Implementation;
+using Hospital.BLL.Services.Seeding;
 using Hospital.DAL.DataBase;
 using Hospital.DAL.Entities;
+using HospitalManagement.Infrastructure;
 using Hospital.DAL.Repository.Abstraction;
 using Hospital.DAL.Repository.Implementation;
 using HospitalManagement.Infrastructure;
 using HospitalManagement.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -136,6 +140,18 @@ public class Program
             .AddEntityFrameworkStores<HospitalDbContext>()
             .AddDefaultTokenProviders();
 
+        builder.Services.AddAuthorization(options =>
+        {
+            foreach (var permission in Permission.All)
+            {
+                options.AddPolicy(Permission.Policy(permission),
+                    policy => policy.RequireClaim(AppClaimTypes.Permission, permission));
+            }
+
+            options.AddPolicy("ClinicalStaff", policy => policy.RequireAssertion(context =>
+                context.User.HasClaim(AppClaimTypes.Clinical, "true")));
+        });
+
         builder.Services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = "CareAxis.Session";
@@ -199,6 +215,7 @@ public class Program
             };
         });
 
+        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddAutoMapper(configuration => configuration.AddProfile<DomainProfile>());
         builder.Services.AddScoped<IEmailSender, EmailSender>();
         builder.Services.AddScoped<IProfileImageStorage, LocalProfileImageStorage>();
@@ -219,17 +236,37 @@ public class Program
         builder.Services.AddScoped<ImedicalRecordService, MedicalRecordService>();
         builder.Services.AddScoped<IScheduleRepo, ScheduleRepo>();
         builder.Services.AddScoped<IScheduleService, ScheduleService>();
+        builder.Services.AddScoped<INumberSequenceService, NumberSequenceService>();
+        builder.Services.AddScoped<IPatientLookupService, PatientLookupService>();
+        builder.Services.AddScoped<IEncounterService, EncounterService>();
+        builder.Services.AddScoped<ILabService, LabService>();
+        builder.Services.AddScoped<IPharmacyService, PharmacyService>();
+        builder.Services.AddScoped<IAdmissionService, AdmissionService>();
+        builder.Services.AddScoped<IBillingService, BillingService>();
+        builder.Services.AddScoped<IReportService, ReportService>();
+        builder.Services.AddScoped<IAppointmentSchedulingService, AppointmentSchedulingService>();
+        builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
+        builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
+        builder.Services.AddScoped<IOrganizationDirectoryService, OrganizationDirectoryService>();
+        builder.Services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, PermissionClaimsTransformation>();
 
         await using var app = builder.Build();
         app.UseForwardedHeaders();
         await SeedRolesAsync(app.Services);
         if (bootstrapAdmin)
         {
+            using (var bootstrapScope = app.Services.CreateScope())
+            {
+                await bootstrapScope.ServiceProvider.GetRequiredService<HospitalDbContext>().Database.MigrateAsync();
+            }
+
             await BootstrapAdminAsync(app.Services, builder.Configuration);
             return;
         }
 
-        if (!app.Environment.IsDevelopment())
+        await DevelopmentSeederRunner.RunAsync(app.Services, builder.Configuration, app.Environment, app.Logger);
+
+        if (!app.Environment.IsDevelopment() && app.Environment.EnvironmentName != "Performance")
         {
             app.UseExceptionHandler("/Home/Error");
             app.UseHsts();
@@ -365,6 +402,47 @@ public class Program
             if (!result.Succeeded)
             {
                 throw new InvalidOperationException($"Required role '{role}' could not be initialized.");
+            }
+        }
+
+        await SeedRolePermissionsAsync(services);
+        }
+    }
+
+    /// <summary>
+    /// Keeps role claims aligned with the compiled permission map, adding missing grants and
+    /// removing revoked ones so the database always reflects <see cref="RolePermissions"/>.
+    /// </summary>
+    private static async Task SeedRolePermissionsAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        foreach (var role in Enum.GetNames<Role>())
+        {
+            var identityRole = await roleManager.FindByNameAsync(role);
+            if (identityRole is null)
+            {
+                continue;
+            }
+
+            var existing = await roleManager.GetClaimsAsync(identityRole);
+            var permissionClaims = existing.Where(c => c.Type == AppClaimTypes.Permission).ToList();
+            var desired = RolePermissions.ForName(role).ToHashSet();
+
+            foreach (var claim in permissionClaims.Where(c => !desired.Contains(c.Value)))
+            {
+                await roleManager.RemoveClaimAsync(identityRole, claim);
+            }
+
+            foreach (var permission in desired.Where(p => permissionClaims.All(c => c.Value != p)))
+            {
+                await roleManager.AddClaimAsync(identityRole, new Claim(AppClaimTypes.Permission, permission));
+            }
+
+            var isClinician = existing.Any(c => c.Type == AppClaimTypes.Clinical);
+            if (RolePermissions.IsClinician(Enum.Parse<Role>(role)) && !isClinician)
+            {
+                await roleManager.AddClaimAsync(identityRole, new Claim(AppClaimTypes.Clinical, "true"));
             }
         }
     }

@@ -405,7 +405,6 @@ public class Program
         }
 
         await SeedRolePermissionsAsync(services);
-        }
     }
 
     /// <summary>

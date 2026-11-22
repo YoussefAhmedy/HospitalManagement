@@ -60,7 +60,7 @@ public sealed class RadiologyController(
     }
 
     [HttpPost]
-    [Authorize(Policy = "perm:" + Permission.ImagingRequest)]
+    [Authorize(Policy = "perm:" + Permission.ImagingOrder)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Request(int encounterId, string modality, string studyName, string? indication, CancellationToken cancellationToken)
     {

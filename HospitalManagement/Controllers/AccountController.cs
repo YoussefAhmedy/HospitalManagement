@@ -8,7 +8,6 @@ using Hospital.BLL.Notifications;
 using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.Entities;
 using HospitalManagement.Infrastructure;
-using HospitalManagement.Services;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;

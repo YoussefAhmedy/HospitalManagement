@@ -6,7 +6,6 @@ using Hospital.BLL.Notifications;
 using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.Entities;
 using Hospital.DAL.Entities.OwnedTypes;
-using HospitalManagement.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;

@@ -4,7 +4,6 @@ using Hospital.BLL.Helpers;
 using Hospital.BLL.ModelVM;
 using Hospital.BLL.Notifications;
 using Hospital.DAL.Entities;
-using HospitalManagement.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;

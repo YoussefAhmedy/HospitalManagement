@@ -1,0 +1,112 @@
+@model Hospital.DAL.Entities.Pharmacy.Prescription
+@{
+    bool canReview = ViewBag.CanReview;
+    bool canDispense = ViewBag.CanDispense;
+    var badge = Hospital.BLL.Common.StatusTone.Prescription(Model.Status);
+    var dispensible = Model.Status is Hospital.DAL.Entities.Pharmacy.PrescriptionStatus.Reviewed or Hospital.DAL.Entities.Pharmacy.PrescriptionStatus.PartiallyDispensed;
+}
+
+@section PageActions {
+    <partial name="_StatusBadge" model="badge" />
+}
+
+<div class="split-grid">
+    <section class="card card--flush" aria-labelledby="lines-heading">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="lines-heading">Prescribed medications</h2>
+                <p class="card__subtitle">Dose, frequency and duration are recorded exactly as prescribed by the clinician.</p>
+            </div>
+        </div>
+        <form asp-action="Dispense" asp-route-id="@Model.Id" method="post">
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Medication</th>
+                            <th scope="col">Dose</th>
+                            <th scope="col">Frequency</th>
+                            <th scope="col">Duration</th>
+                            <th scope="col">Route</th>
+                            <th scope="col" class="num">Qty</th>
+                            <th scope="col" class="num">Dispensed</th>
+                            @if (canDispense && dispensible)
+                            {
+                                <th scope="col" class="num">Dispense</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            var outstanding = item.Quantity - item.DispensedQuantity;
+                            <tr>
+                                <td class="strong">@item.Medication?.Name<span class="table__sub">@item.Medication?.Strength @item.Medication?.Form</span></td>
+                                <td>@item.Dose</td>
+                                <td>@item.Frequency</td>
+                                <td>@item.Duration</td>
+                                <td>@(item.Route ?? "—")</td>
+                                <td class="num">@item.Quantity</td>
+                                <td class="num">@item.DispensedQuantity</td>
+                                @if (canDispense && dispensible)
+                                {
+                                    <td class="num">
+                                        <input type="hidden" name="itemIds" value="@item.Id" />
+                                        <input class="input input--sm num" style="max-width:90px;margin-left:auto"
+                                               type="number" min="0" max="@outstanding" value="@outstanding"
+                                               name="quantity_@item.Id" aria-label="Quantity to dispense for @item.Medication?.Name" />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (canDispense && dispensible)
+            {
+                <div class="card__footer" style="display:flex;justify-content:flex-end">
+                    <button class="btn btn--primary" type="submit" data-confirm="Dispense the selected quantities? Stock will be deducted.">Dispense</button>
+                </div>
+            }
+        </form>
+    </section>
+
+    <div class="stack">
+        <section class="card">
+            <div class="card__header"><h2 class="card__title">Prescription</h2></div>
+            <div class="card__body">
+                <dl class="dl">
+                    <dt>Number</dt><dd class="mono">@Model.Number</dd>
+                    <dt>Patient</dt><dd>@Model.Patient?.FirstName @Model.Patient?.LastName · @Model.Patient?.Mrn</dd>
+                    <dt>Encounter</dt><dd><a asp-controller="Encounters" asp-action="Details" asp-route-id="@Model.EncounterId">@Model.Encounter?.Number</a></dd>
+                    <dt>Created</dt><dd>@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</dd>
+                    <dt>Reviewed</dt><dd>@(Model.ReviewedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "Not yet reviewed")</dd>
+                    @if (!string.IsNullOrWhiteSpace(Model.PharmacistNote))
+                    {
+                        <dt>Pharmacist note</dt><dd>@Model.PharmacistNote</dd>
+                    }
+                </dl>
+            </div>
+        </section>
+
+        @if (canReview && Model.Status == Hospital.DAL.Entities.Pharmacy.PrescriptionStatus.Pending)
+        {
+            <section class="card">
+                <div class="card__header"><h2 class="card__title">Pharmacist review</h2></div>
+                <div class="card__body stack" style="gap:var(--space-3)">
+                    <div class="notice notice--warning">
+                        <partial name="_Icon" model="@("alert")" />
+                        <div>Check allergies, interactions and dose before approving. Nothing is dispensed until this review is recorded.</div>
+                    </div>
+                    <form asp-action="Review" asp-route-id="@Model.Id" method="post" style="display:grid;gap:var(--space-2)">
+                        <textarea class="textarea" name="note" rows="2" placeholder="Review note (optional)"></textarea>
+                        <div style="display:flex;gap:var(--space-2)">
+                            <button class="btn btn--primary" type="submit" name="approve" value="true">Approve</button>
+                            <button class="btn btn--danger" type="submit" name="approve" value="false" data-confirm="Reject this prescription?">Reject</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        }
+    </div>
+</div>

@@ -1,0 +1,325 @@
+@model Hospital.DAL.Entities.Clinical.Encounter
+@using Hospital.DAL.Entities.Clinical
+@{
+    var directory = (Hospital.BLL.Services.Abstraction.OrganizationSnapshot)ViewBag.Directory;
+    bool canDocument = ViewBag.CanDocument;
+    bool canSign = ViewBag.CanSign;
+    bool canTriage = ViewBag.CanTriage;
+    bool canOrderLabs = ViewBag.CanOrderLabs;
+    bool canPrescribe = ViewBag.CanPrescribe;
+    var labOrders = (List<Hospital.DAL.Entities.Diagnostics.LabOrder>)ViewBag.LabOrders;
+    var prescriptions = (List<Hospital.DAL.Entities.Pharmacy.Prescription>)ViewBag.Prescriptions;
+    var status = Hospital.BLL.Common.StatusTone.Encounter(Model.Status);
+    var latestVitals = Model.Vitals.OrderByDescending(v => v.RecordedAtUtc).FirstOrDefault();
+    var editable = Hospital.BLL.Common.Rules.EncounterRules.IsEditable(Model.Status);
+    var severeAllergy = Model.Patient?.Allergies?.Any(a => a.Severity == Hospital.DAL.Entities.AllergySeverity.Severe) == true;
+}
+
+@section PageActions {
+    <partial name="_StatusBadge" model="status" />
+    @if (canDocument && Model.Status is EncounterStatus.Triaged or EncounterStatus.Registered)
+    {
+        <form asp-action="StartConsultation" asp-route-id="@Model.Id" method="post">
+            <button class="btn btn--primary" type="submit">Start consultation</button>
+        </form>
+    }
+    @if (canDocument && Model.Status == EncounterStatus.InConsultation)
+    {
+        <form asp-action="MarkComplete" asp-route-id="@Model.Id" method="post" data-confirm="Mark this encounter complete? Documentation can no longer be edited afterwards.">
+            <button class="btn btn--primary" type="submit">Complete encounter</button>
+        </form>
+    }
+    @if (canSign && Model.Status == EncounterStatus.Completed)
+    {
+        <form asp-action="Sign" asp-route-id="@Model.Id" method="post" data-confirm="Signing closes the encounter permanently. Corrections will require a recorded amendment.">
+            <button class="btn btn--navy" type="submit">Sign and close</button>
+        </form>
+    }
+}
+
+@if (severeAllergy)
+{
+    <div class="notice notice--danger" role="alert" style="margin-bottom:var(--space-5)">
+        <partial name="_Icon" model="@("alert")" />
+        <div>
+            <div class="notice__title">Severe allergy on record</div>
+            @string.Join(", ", Model.Patient!.Allergies.Where(a => a.Severity == Hospital.DAL.Entities.AllergySeverity.Severe).Select(a => a.Substance)) — confirm before prescribing.
+        </div>
+    </div>
+}
+
+<div class="split-grid">
+    <div class="stack">
+        <section class="card" aria-labelledby="summary-heading">
+            <div class="card__header"><h2 class="card__title" id="summary-heading">Encounter summary</h2></div>
+            <div class="card__body">
+                <dl class="dl">
+                    <dt>Patient</dt><dd>@Model.Patient?.FirstName @Model.Patient?.LastName · MRN @Model.Patient?.Mrn</dd>
+                    <dt>Clinician</dt><dd>@(Model.Doctor is null ? "Unassigned" : $"Dr. {Model.Doctor.FirstName} {Model.Doctor.LastName}")</dd>
+                    <dt>Department</dt><dd>@(Model.Department?.Name ?? "—")</dd>
+                    <dt>Type</dt><dd>@Model.Type</dd>
+                    <dt>Chief complaint</dt><dd>@(string.IsNullOrWhiteSpace(Model.ChiefComplaint) ? "Not recorded" : Model.ChiefComplaint)</dd>
+                    <dt>Registered</dt><dd>@Model.RegisteredAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</dd>
+                    <dt>Triaged</dt><dd>@(Model.TriagedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</dd>
+                    <dt>Started</dt><dd>@(Model.StartedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</dd>
+                    <dt>Completed</dt><dd>@(Model.CompletedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</dd>
+                    <dt>Signed</dt><dd>@(Model.SignedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="vitals-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="vitals-heading">Vital signs</h2>
+                    <p class="card__subtitle">@Model.Vitals.Count reading@(Model.Vitals.Count == 1 ? "" : "s") recorded</p>
+                </div>
+            </div>
+            <div class="card__body">
+                @if (latestVitals is null)
+                {
+                    <p class="card__subtitle" style="margin-bottom:var(--space-4)">No vitals recorded yet.</p>
+                }
+                else
+                {
+                    <div class="kpi-grid" style="margin-bottom:var(--space-4)">
+                        <div class="kpi kpi--neutral" style="padding:var(--space-3) var(--space-4)"><div class="kpi__label">Temp</div><div class="kpi__value" style="font-size:var(--text-xl)">@(latestVitals.TemperatureC?.ToString("0.0") ?? "—") °C</div></div>
+                        <div class="kpi kpi--neutral" style="padding:var(--space-3) var(--space-4)"><div class="kpi__label">Blood pressure</div><div class="kpi__value" style="font-size:var(--text-xl)">@(latestVitals.SystolicBp?.ToString() ?? "—")/@(latestVitals.DiastolicBp?.ToString() ?? "—")</div></div>
+                        <div class="kpi kpi--neutral" style="padding:var(--space-3) var(--space-4)"><div class="kpi__label">Pulse</div><div class="kpi__value" style="font-size:var(--text-xl)">@(latestVitals.PulseBpm?.ToString() ?? "—") <span style="font-size:var(--text-sm)">bpm</span></div></div>
+                        <div class="kpi kpi--neutral" style="padding:var(--space-3) var(--space-4)"><div class="kpi__label">SpO₂</div><div class="kpi__value" style="font-size:var(--text-xl)">@(latestVitals.OxygenSaturation?.ToString("0.0") ?? "—") <span style="font-size:var(--text-sm)">%</span></div></div>
+                        <div class="kpi kpi--neutral" style="padding:var(--space-3) var(--space-4)"><div class="kpi__label">Resp</div><div class="kpi__value" style="font-size:var(--text-xl)">@(latestVitals.RespiratoryRate?.ToString() ?? "—") <span style="font-size:var(--text-sm)">/min</span></div></div>
+                        <div class="kpi kpi--neutral" style="padding:var(--space-3) var(--space-4)"><div class="kpi__label">Pain</div><div class="kpi__value" style="font-size:var(--text-xl)">@(latestVitals.PainScore?.ToString() ?? "—") <span style="font-size:var(--text-sm)">/10</span></div></div>
+                    </div>
+                    <p class="card__subtitle">Recorded @latestVitals.RecordedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                }
+
+                @if (canTriage && editable)
+                {
+                    <form asp-action="Vitals" asp-route-id="@Model.Id" method="post" style="margin-top:var(--space-4)">
+                        <div class="form-grid">
+                            <div class="field"><label class="field__label" for="t">Temperature °C</label><input class="input input--sm" id="t" name="TemperatureC" type="number" step="0.1" min="25" max="45" /></div>
+                            <div class="field"><label class="field__label" for="sbp">Systolic</label><input class="input input--sm" id="sbp" name="SystolicBp" type="number" min="40" max="300" /></div>
+                            <div class="field"><label class="field__label" for="dbp">Diastolic</label><input class="input input--sm" id="dbp" name="DiastolicBp" type="number" min="20" max="200" /></div>
+                            <div class="field"><label class="field__label" for="pulse">Pulse</label><input class="input input--sm" id="pulse" name="PulseBpm" type="number" min="20" max="240" /></div>
+                            <div class="field"><label class="field__label" for="rr">Respiratory rate</label><input class="input input--sm" id="rr" name="RespiratoryRate" type="number" min="4" max="80" /></div>
+                            <div class="field"><label class="field__label" for="spo2">SpO₂ %</label><input class="input input--sm" id="spo2" name="OxygenSaturation" type="number" step="0.1" min="40" max="100" /></div>
+                            <div class="field"><label class="field__label" for="pain">Pain (0–10)</label><input class="input input--sm" id="pain" name="PainScore" type="number" min="0" max="10" /></div>
+                        </div>
+                        <button class="btn btn--sm btn--primary" type="submit" style="margin-top:var(--space-3)">Record vitals</button>
+                    </form>
+                }
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="notes-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="notes-heading">Clinical notes</h2>
+                    <p class="card__subtitle">Drafts can be edited; signed notes are immutable and corrections create an amendment.</p>
+                </div>
+            </div>
+            <div class="card__body">
+                @if (Model.Notes.Count == 0)
+                {
+                    <p class="card__subtitle" style="margin-bottom:var(--space-4)">No notes recorded.</p>
+                }
+                else
+                {
+                    <ul class="timeline">
+                        @foreach (var note in Model.Notes)
+                        {
+                            <li class="timeline__item">
+                                <span class="timeline__dot" aria-hidden="true"></span>
+                                <span class="timeline__body" style="width:100%">
+                                    <span class="timeline__title">
+                                        @(note.AuthorRole ?? "Clinician")
+                                        @if (note.AmendsNoteId is not null)
+                                        {
+                                            <span class="badge badge--purple" style="margin-left:6px">Amendment</span>
+                                        }
+                                        @if (note.Status == NoteStatus.Signed)
+                                        {
+                                            <span class="badge badge--success" style="margin-left:6px">Signed</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge--warning" style="margin-left:6px">Draft</span>
+                                        }
+                                    </span>
+                                    <span class="timeline__meta">@note.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC@(note.SignedAtUtc is null ? "" : $" · signed {note.SignedAtUtc:yyyy-MM-dd HH:mm} UTC")</span>
+                                    <span class="timeline__text" style="white-space:pre-line">@note.Content</span>
+                                    @if (canSign && note.Status == NoteStatus.Draft && editable)
+                                    {
+                                        <form asp-action="SignNote" asp-route-id="@Model.Id" asp-route-noteId="@note.Id" method="post" style="margin-top:var(--space-2)" data-confirm="Sign this note? It becomes immutable.">
+                                            <button class="btn btn--sm" type="submit">Sign note</button>
+                                        </form>
+                                    }
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (canDocument && editable)
+                {
+                    <form asp-action="AddNote" asp-route-id="@Model.Id" method="post" style="margin-top:var(--space-4)">
+                        <label class="field__label" for="content">New note</label>
+                        <textarea class="textarea" id="content" name="content" rows="4" required placeholder="History, examination findings, assessment and plan."></textarea>
+                        <button class="btn btn--sm btn--primary" type="submit" style="margin-top:var(--space-2)">Save draft</button>
+                    </form>
+                }
+            </div>
+        </section>
+
+        <section class="card card--flush" aria-labelledby="orders-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="orders-heading">Orders</h2>
+                    <p class="card__subtitle">Laboratory, imaging and prescriptions for this encounter</p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="table table--compact">
+                    <thead><tr><th scope="col">Type</th><th scope="col">Reference</th><th scope="col">Detail</th><th scope="col">Status</th><th scope="col" class="actions"></th></tr></thead>
+                    <tbody>
+                        @foreach (var order in labOrders)
+                        {
+                            var badge = Hospital.BLL.Common.StatusTone.Lab(order.Status);
+                            <tr>
+                                <td>Laboratory</td>
+                                <td class="mono">@order.Number</td>
+                                <td>@order.Items.Count test(s)</td>
+                                <td><partial name="_StatusBadge" model="badge" /></td>
+                                <td class="actions"><a class="btn btn--sm" asp-controller="Laboratory" asp-action="Details" asp-route-id="@order.Id">View</a></td>
+                            </tr>
+                        }
+                        @foreach (var prescription in prescriptions)
+                        {
+                            var badge = Hospital.BLL.Common.StatusTone.Prescription(prescription.Status);
+                            <tr>
+                                <td>Prescription</td>
+                                <td class="mono">@prescription.Number</td>
+                                <td>@prescription.Items.Count medication(s)</td>
+                                <td><partial name="_StatusBadge" model="badge" /></td>
+                                <td class="actions"><a class="btn btn--sm" asp-controller="Pharmacy" asp-action="Details" asp-route-id="@prescription.Id">View</a></td>
+                            </tr>
+                        }
+                        @if (labOrders.Count == 0 && prescriptions.Count == 0)
+                        {
+                            <tr><td colspan="5" class="muted">No orders recorded for this encounter.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="stack">
+        <section class="card" aria-labelledby="diagnosis-heading">
+            <div class="card__header"><h2 class="card__title" id="diagnosis-heading">Diagnoses</h2></div>
+            <div class="card__body">
+                @if (Model.Diagnoses.Count == 0)
+                {
+                    <p class="card__subtitle" style="margin:0 0 var(--space-3)">No diagnosis recorded. A signed encounter requires at least one.</p>
+                }
+                else
+                {
+                    <div class="stack" style="gap:var(--space-2);margin-bottom:var(--space-4)">
+                        @foreach (var diagnosis in Model.Diagnoses)
+                        {
+                            <div class="care-tile">
+                                <span class="care-tile__icon"><partial name="_Icon" model="@("file")" /></span>
+                                <span>
+                                    <span class="care-tile__title">@diagnosis.Description</span>
+                                    <span class="care-tile__meta">@(diagnosis.Code ?? "No code") · @diagnosis.Type</span>
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+                @if (canDocument && editable)
+                {
+                    <form asp-action="AddDiagnosis" asp-route-id="@Model.Id" method="post" style="display:grid;gap:var(--space-2)">
+                        <input class="input input--sm" name="description" placeholder="Diagnosis description" required />
+                        <div style="display:flex;gap:var(--space-2)">
+                            <input class="input input--sm" name="code" placeholder="Code (optional)" style="max-width:130px" />
+                            <select class="select select--sm" name="type">
+                                <option value="Primary">Primary</option>
+                                <option value="Secondary">Secondary</option>
+                                <option value="Differential">Differential</option>
+                            </select>
+                        </div>
+                        <button class="btn btn--sm" type="submit">Record diagnosis</button>
+                    </form>
+                }
+            </div>
+        </section>
+
+        @if (canOrderLabs)
+        {
+            <section class="card" aria-labelledby="order-lab-heading">
+                <div class="card__header"><h2 class="card__title" id="order-lab-heading">Order laboratory tests</h2></div>
+                <div class="card__body">
+                    @if (!editable)
+                    {
+                        <p class="card__subtitle" style="margin:0">This encounter is closed; new orders require a new encounter.</p>
+                    }
+                    else
+                    {
+                        <form asp-controller="Laboratory" asp-action="CreateOrder" asp-route-encounterId="@Model.Id" method="post" style="display:grid;gap:var(--space-2)">
+                            <div class="field">
+                                <label class="field__label" for="labs">Tests</label>
+                                <select class="select" id="labs" name="labTestIds" multiple size="6">
+                                    @foreach (var test in directory.LabTests)
+                                    {
+                                        <option value="@test.Id">@test.Label</option>
+                                    }
+                                </select>
+                                <span class="field__hint">Hold Ctrl/Cmd to select more than one test.</span>
+                            </div>
+                            <input class="input input--sm" name="clinicalNotes" placeholder="Clinical notes for the laboratory" />
+                            <button class="btn btn--sm btn--primary" type="submit">Submit order</button>
+                        </form>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (canPrescribe && editable)
+        {
+            <section class="card" aria-labelledby="prescribe-heading">
+                <div class="card__header"><h2 class="card__title" id="prescribe-heading">Prescribe</h2></div>
+                <div class="card__body">
+                    <form asp-controller="Pharmacy" asp-action="Create" asp-route-encounterId="@Model.Id" method="post" style="display:grid;gap:var(--space-2)">
+                        <div class="field">
+                            <label class="field__label" for="meds">Medications</label>
+                            <select class="select" id="meds" name="medicationIds" multiple size="5">
+                                @foreach (var medication in directory.Medications)
+                                {
+                                    <option value="@medication.Id">@medication.Label</option>
+                                }
+                            </select>
+                        </div>
+                        <input class="input input--sm" name="dose" placeholder="Dose e.g. 1 tablet" required />
+                        <input class="input input--sm" name="frequency" placeholder="Frequency e.g. twice daily" required />
+                        <input class="input input--sm" name="duration" placeholder="Duration e.g. 5 days" required />
+                        <input class="input input--sm" name="route" placeholder="Route e.g. oral" />
+                        <button class="btn btn--sm btn--primary" type="submit">Send to pharmacy</button>
+                    </form>
+                    <p class="field__hint" style="margin-top:var(--space-2)">Prescriptions are reviewed by a pharmacist before dispensing.</p>
+                </div>
+            </section>
+        }
+
+        @if (Model.Status == EncounterStatus.Signed)
+        {
+            <div class="notice notice--success">
+                <partial name="_Icon" model="@("shield")" />
+                <div>
+                    <div class="notice__title">Signed and closed</div>
+                    This encounter was signed on @Model.SignedAtUtc?.ToString("yyyy-MM-dd HH:mm") UTC and can no longer be edited.
+                </div>
+            </div>
+        }
+    </div>
+</div>

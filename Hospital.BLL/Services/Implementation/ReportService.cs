@@ -3,6 +3,7 @@ using System.Text;
 using Hospital.BLL.Common;
 using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.DataBase;
+using Hospital.DAL.Entities;
 using Hospital.DAL.Entities.Billing;
 using Hospital.DAL.Entities.Clinical;
 using Hospital.DAL.Entities.Diagnostics;

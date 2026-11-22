@@ -148,8 +148,7 @@ public class Program
                     policy => policy.RequireClaim(AppClaimTypes.Permission, permission));
             }
 
-            options.AddPolicy("ClinicalStaff", policy => policy.RequireAssertion(context =>
-                context.User.HasClaim(AppClaimTypes.Clinical, "true")));
+            options.AddPolicy("ClinicalStaff", policy => policy.RequireClaim(AppClaimTypes.Clinical, "true"));
         });
 
         builder.Services.ConfigureApplicationCookie(options =>

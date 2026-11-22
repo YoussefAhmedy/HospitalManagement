@@ -37,7 +37,7 @@ public sealed class ImagingService(
 
         var order = new ImagingOrder
         {
-            Number = await numbers.NextFormattedAsync(ClinicalNumber.ImagingOrder, "imaging-order", cancellationToken),
+            Number = await numbers.NextFormattedAsync(ClinicalNumber.Imaging, "imaging-order", cancellationToken),
             EncounterId = encounterId,
             PatientId = encounter.PatientId,
             Modality = modality.Trim().ToUpperInvariant(),

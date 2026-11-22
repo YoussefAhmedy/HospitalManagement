@@ -13,7 +13,7 @@ public static class RolePermissions
         Permission.PatientView, Permission.AppointmentView, Permission.AppointmentManage,
         Permission.EncounterView, Permission.EncounterCreate, Permission.EncounterDocument,
         Permission.EncounterSign, Permission.TriageRecord,
-        Permission.LabOrderCreate, Permission.ImagingOrder,
+        Permission.LabOrderCreate, Permission.ImagingView, Permission.ImagingOrder,
         Permission.PrescriptionCreate, Permission.AdmissionView, Permission.ReportView
     ];
 
@@ -24,7 +24,8 @@ public static class RolePermissions
             Permission.PatientView, Permission.PatientCreate, Permission.PatientEdit,
             Permission.AppointmentView, Permission.AppointmentCreate, Permission.AppointmentManage,
             Permission.AppointmentCheckIn, Permission.EncounterView, Permission.LabOrderCreate,
-            Permission.ImagingOrder, Permission.PrescriptionCreate, Permission.AdmissionView,
+            Permission.ImagingView, Permission.ImagingOrder, Permission.ImagingManage,
+            Permission.PrescriptionCreate, Permission.AdmissionView,
             Permission.AdmissionManage, Permission.BedManage, Permission.BillingView,
             Permission.ReportView, Permission.ReportExport, Permission.UserManage
         ],
@@ -47,11 +48,13 @@ public static class RolePermissions
         [Role.LabTechnician] =
         [
             Permission.PatientView, Permission.LabCollect, Permission.LabEnterResult,
-            Permission.LabVerify, Permission.LabRelease, Permission.ReportView
+            Permission.LabVerify, Permission.LabRelease, Permission.ImagingView,
+            Permission.ReportView
         ],
         [Role.Radiologist] =
         [
-            Permission.PatientView, Permission.ImagingReport, Permission.ImagingVerify,
+            Permission.PatientView, Permission.ImagingView, Permission.ImagingManage,
+            Permission.ImagingReport, Permission.ImagingVerify, Permission.ImagingRelease,
             Permission.ReportView
         ],
         [Role.Pharmacist] =

@@ -247,6 +247,7 @@ public class Program
         builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
         builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
         builder.Services.AddScoped<IOrganizationDirectoryService, OrganizationDirectoryService>();
+        builder.Services.AddScoped<IImagingService, ImagingService>();
         builder.Services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, PermissionClaimsTransformation>();
 
         await using var app = builder.Build();

@@ -45,13 +45,13 @@ public sealed class PatientsController(
         ViewData["Section"] = "Clinical";
         ViewData["Subtitle"] = "A medical record number is allocated automatically and is permanent.";
         ViewBag.Departments = (await dbContext.Departments.Where(d => d.IsActive).OrderBy(d => d.Name).ToListAsync()).Select(d => new { d.Id, d.Name });
-        return View(new BLL.ModelVM.RegisterPatientVm());
+        return View(new Hospital.BLL.ModelVM.RegisterPatientVm());
     }
 
     [HttpPost]
     [Authorize(Policy = "perm:" + Permission.PatientCreate)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(BLL.ModelVM.RegisterPatientVm model, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(Hospital.BLL.ModelVM.RegisterPatientVm model, CancellationToken cancellationToken)
     {
         ViewData["Title"] = "Register patient";
         ViewData["Section"] = "Clinical";
@@ -100,7 +100,7 @@ public sealed class PatientsController(
             return View(model);
         }
 
-        await userManager.AddToRoleAsync(patient, BLL.Helpers.Role.Patient.ToString());
+        await userManager.AddToRoleAsync(patient, Hospital.BLL.Helpers.Role.Patient.ToString());
         await audit.RecordAsync("patient.create", CurrentUserId(), patient.Id, "Patient", patient.Id, cancellationToken);
         TempData["StatusMessage"] = $"Patient registered with MRN {patient.Mrn}.";
         return RedirectToAction(nameof(Details), new { id = patient.Id });
@@ -138,7 +138,7 @@ public sealed class PatientsController(
     [HttpPost]
     [Authorize(Policy = "perm:" + Permission.PatientEdit)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddAllergy(string id, string substance, string? reaction, DAL.Entities.AllergySeverity severity, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddAllergy(string id, string substance, string? reaction, Hospital.DAL.Entities.AllergySeverity severity, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(substance))
         {
@@ -164,7 +164,7 @@ public sealed class PatientsController(
     [HttpPost]
     [Authorize(Policy = "perm:" + Permission.EncounterCreate)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> StartEncounter(string id, DAL.Entities.Clinical.EncounterType type, string? complaint, CancellationToken cancellationToken)
+    public async Task<IActionResult> StartEncounter(string id, Hospital.DAL.Entities.Clinical.EncounterType type, string? complaint, CancellationToken cancellationToken)
     {
         var result = await encounters.RegisterAsync(id, null, null, type, complaint, CurrentUserId(), cancellationToken);
         if (!result.Succeeded || result.Value is null)

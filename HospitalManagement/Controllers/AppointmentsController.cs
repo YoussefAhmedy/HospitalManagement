@@ -120,7 +120,7 @@ public sealed class AppointmentsController(
         return RedirectToAction(nameof(Index), new { date = date?.ToString("yyyy-MM-dd") });
     }
 
-    private async Task Flash(BLL.Common.Result result, string eventType, int id, string successMessage)
+    private async Task Flash(Hospital.BLL.Common.Result result, string eventType, int id, string successMessage)
     {
         if (!result.Succeeded)
         {

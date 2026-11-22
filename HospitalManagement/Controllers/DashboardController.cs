@@ -70,7 +70,7 @@ public sealed class DashboardController(
         if (User.IsInRole(nameof(Role.Nurse)))
         {
             ViewBag.Kpis = await workspace.ReceptionAsync(cancellationToken);
-            var triage = await encounters.QueryAsync(DAL.Entities.Clinical.EncounterStatus.Registered, null, null, new DateRange(null, null), null, 1, 10, cancellationToken);
+            var triage = await encounters.QueryAsync(Hospital.DAL.Entities.Clinical.EncounterStatus.Registered, null, null, new DateRange(null, null), null, 1, 10, cancellationToken);
             ViewBag.Triage = triage;
             ViewData["Subtitle"] = "Triage queue and vitals recording.";
             return View("Reception");

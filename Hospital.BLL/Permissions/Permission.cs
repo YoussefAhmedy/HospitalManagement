@@ -32,9 +32,12 @@ public static class Permission
     public const string LabEnterResult = "lab.result.enter";
     public const string LabVerify = "lab.result.verify";
     public const string LabRelease = "lab.result.release";
+    public const string ImagingView = "imaging.view";
     public const string ImagingOrder = "imaging.order";
+    public const string ImagingManage = "imaging.manage";
     public const string ImagingReport = "imaging.report";
     public const string ImagingVerify = "imaging.verify";
+    public const string ImagingRelease = "imaging.release";
 
     // Pharmacy
     public const string PrescriptionCreate = "prescription.create";
@@ -72,7 +75,7 @@ public static class Permission
         AppointmentView, AppointmentCreate, AppointmentManage, AppointmentCheckIn,
         EncounterView, EncounterCreate, EncounterDocument, EncounterSign, TriageRecord,
         LabOrderCreate, LabCollect, LabEnterResult, LabVerify, LabRelease,
-        ImagingOrder, ImagingReport, ImagingVerify,
+        ImagingView, ImagingOrder, ImagingManage, ImagingReport, ImagingVerify, ImagingRelease,
         PrescriptionCreate, PrescriptionReview, PrescriptionDispense, InventoryManage,
         AdmissionView, AdmissionManage, BedManage, DischargeApprove,
         BillingView, BillingManage, BillingRefund, InsuranceManage,

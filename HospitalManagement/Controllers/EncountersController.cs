@@ -66,6 +66,7 @@ public sealed class EncountersController(
         ViewBag.CanTriage = User.HasClaim(AppClaimTypes.Permission, Permission.TriageRecord);
         ViewBag.CanOrderLabs = User.HasClaim(AppClaimTypes.Permission, Permission.LabOrderCreate);
         ViewBag.CanPrescribe = User.HasClaim(AppClaimTypes.Permission, Permission.PrescriptionCreate);
+        ViewBag.CanOrderImaging = User.HasClaim(AppClaimTypes.Permission, Permission.ImagingOrder);
         ViewBag.LabOrders = await dbContext.LabOrders.AsNoTracking()
             .Include(o => o.Items).ThenInclude(i => i.LabTest)
             .Where(o => o.EncounterId == id)
@@ -150,7 +151,7 @@ public sealed class EncountersController(
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    private async Task Flash(BLL.Common.Result result, string eventType, string resourceId, string successMessage)
+    private async Task Flash(Hospital.BLL.Common.Result result, string eventType, string resourceId, string successMessage)
     {
         if (!result.Succeeded)
         {
@@ -166,6 +167,6 @@ public sealed class EncountersController(
 
 internal static class ResultExtensions
 {
-    public static BLL.Common.Result As<T>(this BLL.Common.Result<T> result, Func<T, object?> _) =>
-        result.Succeeded ? BLL.Common.Result.Ok() : BLL.Common.Result.Fail(result.Error ?? "Failed", result.Code);
+    public static Hospital.BLL.Common.Result As<T>(this Hospital.BLL.Common.Result<T> result, Func<T, object?> _) =>
+        result.Succeeded ? Hospital.BLL.Common.Result.Ok() : Hospital.BLL.Common.Result.Fail(result.Error ?? "Failed", result.Code);
 }

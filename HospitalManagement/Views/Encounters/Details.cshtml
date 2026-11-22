@@ -7,6 +7,7 @@
     bool canTriage = ViewBag.CanTriage;
     bool canOrderLabs = ViewBag.CanOrderLabs;
     bool canPrescribe = ViewBag.CanPrescribe;
+    bool canOrderImaging = ViewBag.CanOrderImaging;
     var labOrders = (List<Hospital.DAL.Entities.Diagnostics.LabOrder>)ViewBag.LabOrders;
     var prescriptions = (List<Hospital.DAL.Entities.Pharmacy.Prescription>)ViewBag.Prescriptions;
     var status = Hospital.BLL.Common.StatusTone.Encounter(Model.Status);
@@ -281,6 +282,30 @@
                             <button class="btn btn--sm btn--primary" type="submit">Submit order</button>
                         </form>
                     }
+                </div>
+            </section>
+        }
+
+        @if (canOrderImaging && editable)
+        {
+            <section class="card" aria-labelledby="order-imaging-heading">
+                <div class="card__header"><h2 class="card__title" id="order-imaging-heading">Request imaging</h2></div>
+                <div class="card__body">
+                    <form asp-controller="Radiology" asp-action="Request" asp-route-encounterId="@Model.Id" method="post" style="display:grid;gap:var(--space-2)">
+                        <div style="display:flex;gap:var(--space-2)">
+                            <select class="select select--sm" name="modality" style="max-width:120px" required aria-label="Modality">
+                                <option value="XR">XR</option>
+                                <option value="CT">CT</option>
+                                <option value="MRI">MRI</option>
+                                <option value="US">US</option>
+                                <option value="MG">MG</option>
+                                <option value="NM">NM</option>
+                            </select>
+                            <input class="input input--sm" name="studyName" placeholder="Study e.g. Chest X-ray PA" required />
+                        </div>
+                        <input class="input input--sm" name="indication" placeholder="Clinical indication" />
+                        <button class="btn btn--sm btn--primary" type="submit">Send to radiology</button>
+                    </form>
                 </div>
             </section>
         }

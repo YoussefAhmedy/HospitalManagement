@@ -23,10 +23,19 @@ public sealed class OrganizationDirectoryService(HospitalDbContext dbContext) : 
         var doctors = await dbContext.Doctors.AsNoTracking()
             .Where(d => d.IsActive)
             .OrderBy(d => d.LastName)
-            .Select(d => new LookupOption(
-                0,
+            .Select(d => new PersonOption(
+                d.Id,
                 "Dr. " + d.FirstName + " " + d.LastName,
                 d.Specialization == null ? null : d.Specialization.Name))
+            .ToListAsync(cancellationToken);
+
+        var staff = await dbContext.Users.AsNoTracking()
+            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
+            .Select(u => new PersonOption(
+                u.Id,
+                (u.FirstName + " " + u.LastName).Trim(),
+                null))
+            .Take(500)
             .ToListAsync(cancellationToken);
 
         var labTests = await dbContext.LabTests.AsNoTracking()
@@ -47,6 +56,6 @@ public sealed class OrganizationDirectoryService(HospitalDbContext dbContext) : 
             .Select(s => new LookupOption(s.Id, s.Name, s.Category.ToString()))
             .ToListAsync(cancellationToken);
 
-        return new OrganizationSnapshot(branches, departments, doctors, labTests, medications, serviceItems);
+        return new OrganizationSnapshot(branches, departments, doctors, labTests, medications, serviceItems, staff);
     }
 }

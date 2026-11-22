@@ -1,0 +1,139 @@
+@model Hospital.DAL.Entities.Billing.Invoice
+@{
+    bool canManage = ViewBag.CanManage;
+    var badge = Hospital.BLL.Common.StatusTone.Invoice(Model.Status);
+}
+
+@section PageActions {
+    <partial name="_StatusBadge" model="badge" />
+    <button class="btn btn--sm" type="button" data-print><partial name="_Icon" model="@("print")" /> Print</button>
+}
+
+<div class="print-header">
+    <div class="print-header__brand">CareAxis · Invoice @Model.Number</div>
+    <div class="print-header__meta">Issued @Model.IssuedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC · Balance @Hospital.BLL.Common.Money.Format(Model.Balance)</div>
+</div>
+
+<div class="split-grid">
+    <div class="stack">
+        <section class="card card--flush">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title">Invoice lines</h2>
+                    <p class="card__subtitle">@Model.Lines.Count line(s)</p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th scope="col">Description</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Unit price</th><th scope="col" class="num">Amount</th></tr></thead>
+                    <tbody>
+                        @foreach (var line in Model.Lines)
+                        {
+                            <tr>
+                                <td>@line.Description</td>
+                                <td class="num">@line.Quantity</td>
+                                <td class="num">@Hospital.BLL.Common.Money.Format(line.UnitPrice)</td>
+                                <td class="num strong">@Hospital.BLL.Common.Money.Format(line.Amount)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card__footer">
+                <div class="stack" style="gap:var(--space-1)">
+                    <div style="display:flex;justify-content:space-between"><span>Total</span><strong>@Hospital.BLL.Common.Money.Format(Model.Total)</strong></div>
+                    <div style="display:flex;justify-content:space-between"><span>Insurance covered</span><span>@Hospital.BLL.Common.Money.Format(Model.InsuranceCoveredAmount)</span></div>
+                    <div style="display:flex;justify-content:space-between"><span>Paid</span><span>@Hospital.BLL.Common.Money.Format(Model.Paid)</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:var(--text-md)"><strong>Balance due</strong><strong>@Hospital.BLL.Common.Money.Format(Model.Balance)</strong></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card card--flush">
+            <div class="card__header"><h2 class="card__title">Payments</h2></div>
+            @if (Model.Payments.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("No payments yet", "Record a payment against this invoice.", "invoice"))" />
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table table--compact">
+                        <thead><tr><th scope="col">Receipt</th><th scope="col">Type</th><th scope="col">Method</th><th scope="col" class="num">Amount</th><th scope="col">Recorded</th><th scope="col">State</th></tr></thead>
+                        <tbody>
+                            @foreach (var payment in Model.Payments.OrderByDescending(p => p.PaidAtUtc))
+                            {
+                                var state = payment.IsRefund
+                                    ? (payment.ApprovedByUserId is null ? ("Awaiting approval", "warning") : ("Refunded", "info"))
+                                    : ("Received", "success");
+                                <tr>
+                                    <td class="mono">@payment.ReceiptNumber</td>
+                                    <td>@(payment.IsRefund ? "Refund" : "Payment")</td>
+                                    <td>@payment.Method</td>
+                                    <td class="num">@Hospital.BLL.Common.Money.Format(payment.Amount)</td>
+                                    <td class="nowrap muted">@payment.PaidAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td><partial name="_StatusBadge" model="state" /></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+
+    <div class="stack">
+        <section class="card">
+            <div class="card__header"><h2 class="card__title">Invoice</h2></div>
+            <div class="card__body">
+                <dl class="dl">
+                    <dt>Number</dt><dd class="mono">@Model.Number</dd>
+                    <dt>Patient</dt><dd>@Model.Patient?.FirstName @Model.Patient?.LastName · @Model.Patient?.Mrn</dd>
+                    <dt>Issued</dt><dd>@Model.IssuedAtUtc.ToString("yyyy-MM-dd")</dd>
+                    <dt>Due</dt><dd>@(Model.DueAtUtc?.ToString("yyyy-MM-dd") ?? "—")</dd>
+                </dl>
+            </div>
+        </section>
+
+        @if (canManage && Model.Balance > 0)
+        {
+            <section class="card">
+                <div class="card__header"><h2 class="card__title">Record payment</h2></div>
+                <div class="card__body">
+                    <form asp-action="Pay" asp-route-id="@Model.Id" method="post" class="stack" style="gap:var(--space-2)">
+                        <div class="field">
+                            <label class="field__label" for="amount">Amount</label>
+                            <input class="input" id="amount" name="amount" type="number" step="0.01" min="0.01" max="@Model.Balance" value="@Model.Balance.ToString("0.00")" required />
+                        </div>
+                        <div class="field">
+                            <label class="field__label" for="method">Method</label>
+                            <select class="select" id="method" name="method">
+                                @foreach (var method in Enum.GetNames<Hospital.DAL.Entities.Billing.PaymentMethod>())
+                                {
+                                    <option value="@method">@method</option>
+                                }
+                            </select>
+                        </div>
+                        <input class="input input--sm" name="reference" placeholder="Reference (optional)" aria-label="Payment reference" />
+                        <button class="btn btn--primary" type="submit">Record payment</button>
+                    </form>
+                </div>
+            </section>
+        }
+
+        @if (canManage && Model.Paid > 0)
+        {
+            <section class="card">
+                <div class="card__header"><h2 class="card__title">Refund</h2></div>
+                <div class="card__body">
+                    <form asp-action="Refund" asp-route-id="@Model.Id" method="post" class="stack" style="gap:var(--space-2)" data-confirm="Record a refund against this invoice?">
+                        <input class="input input--sm" name="amount" type="number" step="0.01" min="0.01" max="@Model.Paid" placeholder="Refund amount" required aria-label="Refund amount" />
+                        <input class="input input--sm" name="reason" placeholder="Reason (recorded on the receipt)" required aria-label="Refund reason" />
+                        <span class="field__hint">Refunds of @Hospital.BLL.Common.Money.Format(100) or more require a second officer's approval.</span>
+                        <button class="btn btn--danger" type="submit">Record refund</button>
+                    </form>
+                </div>
+            </section>
+        }
+    </div>
+</div>

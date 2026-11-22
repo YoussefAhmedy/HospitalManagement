@@ -1,0 +1,46 @@
+@{
+    var patients = (Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.PatientLookupRow>)ViewBag.Patients;
+    string? selected = ViewBag.SelectedPatient;
+    var doctors = (IEnumerable<dynamic>)ViewBag.Doctors;
+}
+
+<div class="card">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Admission request</h2>
+            <p class="card__subtitle">A clinician assigns the bed after this request is recorded.</p>
+        </div>
+    </div>
+    <form asp-action="Request" method="post">
+        <div class="card__body stack" style="gap:var(--space-4)">
+            <div class="field">
+                <label class="field__label" for="patientId">Patient <span class="req">*</span></label>
+                <select class="select" id="patientId" name="patientId" required>
+                    <option value="">Select a patient</option>
+                    @foreach (var patient in patients.Items)
+                    {
+                        <option value="@patient.Id" selected="@(selected == patient.Id)">@patient.Name · @patient.Mrn</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label class="field__label" for="doctorId">Admitting clinician</label>
+                <select class="select" id="doctorId" name="admittingDoctorId">
+                    <option value="">Unassigned</option>
+                    @foreach (var doctor in doctors)
+                    {
+                        <option value="@doctor.Id">@doctor.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label class="field__label" for="reason">Reason for admission</label>
+                <textarea class="textarea" id="reason" name="reason" rows="3" maxlength="500"></textarea>
+            </div>
+        </div>
+        <div class="card__footer" style="display:flex;justify-content:flex-end;gap:var(--space-2)">
+            <a class="btn" asp-action="Index">Cancel</a>
+            <button class="btn btn--primary" type="submit">Request admission</button>
+        </div>
+    </form>
+</div>

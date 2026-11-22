@@ -34,7 +34,8 @@
     var initials = string.Concat(userName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Home";
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
-    bool Has(string permission) => User.HasClaim(AppClaimTypes.Permission, permission);
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    bool Has(string permission) => isAuthenticated && User.HasClaim(AppClaimTypes.Permission, permission);
     bool Active(string controller, string? action = null) =>
         string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
         && (action is null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase));
@@ -55,6 +56,64 @@
 <body class="@bodyClass" data-app-shell>
     <a class="skip-link" href="#main-content">Skip to main content</a>
 
+    @if (!isAuthenticated)
+    {
+        <div class="public-shell">
+            <header class="public-nav">
+                <a class="public-nav__brand" asp-controller="Home" asp-action="Index">
+                    <span class="sidebar__mark" aria-hidden="true">C<span aria-hidden="true">+</span></span>
+                    <span>
+                        <span class="public-nav__brand-name">CareAxis</span>
+                        <span class="public-nav__brand-sub">Hospital system</span>
+                    </span>
+                </a>
+                <nav class="public-nav__links" aria-label="Site">
+                    <a asp-controller="Home" asp-action="Index">Overview</a>
+                    <a asp-controller="Home" asp-action="Security">Security</a>
+                    <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+                    <a asp-controller="Home" asp-action="Support">Support</a>
+                </nav>
+                <div class="public-nav__actions">
+                    <a class="btn btn--sm" asp-controller="Account" asp-action="LogIn">Sign in</a>
+                </div>
+            </header>
+
+            <main id="main-content" class="@(ViewData["MainClass"] as string ?? "public-main")" tabindex="-1">
+                @if (TempData["StatusMessage"] is string publicStatus)
+                {
+                    <div class="notice notice--success" role="status" style="margin-bottom:var(--space-5)">
+                        <partial name="_Icon" model="@("check")" />
+                        <div>@publicStatus</div>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] is string publicError)
+                {
+                    <div class="notice notice--danger" role="alert" style="margin-bottom:var(--space-5)">
+                        <partial name="_Icon" model="@("alert")" />
+                        <div>@publicError</div>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+
+            <footer class="public-footer">
+                <div class="public-footer__grid">
+                    <div>
+                        <strong>CareAxis</strong>
+                        <p class="public-footer__note">Synthetic demonstration environment. No real patient data is present.</p>
+                    </div>
+                    <div class="public-footer__links">
+                        <a asp-controller="Home" asp-action="Security">Security</a>
+                        <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        <a asp-controller="Home" asp-action="Terms">Terms</a>
+                        <a asp-controller="Home" asp-action="Support">Support</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    }
+    else
+    {
     <div class="app">
         <aside class="sidebar" id="app-sidebar" aria-label="Primary navigation">
             <a class="sidebar__brand" asp-controller="Home" asp-action="Index" aria-label="CareAxis home">
@@ -269,6 +328,7 @@
             </main>
         </div>
     </div>
+    }
 
     <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
 

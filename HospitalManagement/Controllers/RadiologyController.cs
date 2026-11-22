@@ -5,6 +5,7 @@ using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.Entities.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Hospital.BLL.Helpers;
 
 namespace HospitalManagement.Controllers;
 

@@ -1,0 +1,59 @@
+{
+  "project": "CareAxis Hospital Information System",
+  "generated": "2026-11-22",
+  "branch": "arena/66f04dee-hospitalmanagement",
+  "baseCommit": "bf4c082f73fee0feb3abe83f51372456b1ef6e03",
+  "host": {
+    "os": "Debian 12 (x86_64) ephemeral sandbox",
+    "shell": "bash",
+    "runtimes": { "node": "22.22.3", "python": "3.11.2", "dotnet": "absent", "docker": "absent", "sqlserver": "absent" },
+    "network": ["github.com", "api.github.com", "codeload.github.com", "registry.npmjs.org", "pypi.org", "files.pythonhosted.org"],
+    "blocked": ["nuget.org", "*.nuget.org", "dotnet.microsoft.com", "builds.dotnet.microsoft.com", "packages.microsoft.com", "deb.debian.org", "raw.githubusercontent.com"]
+  },
+  "selected": [
+    {
+      "name": "GitHub Actions CI (.NET 10 restore/build/test)",
+      "url": "https://github.com/YoussefAhmedy/HospitalManagement/actions",
+      "type": "existing hosted build service",
+      "role": "authoritative compile + test verification",
+      "status": "installed and verified (used as verification gate)",
+      "version": "workflow at .github/workflows/ci.yml",
+      "scope": "remote CI, no local install",
+      "verification": "gh run watch; conclusion success",
+      "rollback": "not applicable (existing workflow)"
+    },
+    {
+      "name": "ASP.NET Core 10 MVC + EF Core + Identity (existing solution)",
+      "url": "https://github.com/YoussefAhmedy/HospitalManagement",
+      "type": "application framework",
+      "role": "preserved technology stack per brief",
+      "status": "installed (pre-existing)",
+      "scope": "solution",
+      "rollback": "git revert"
+    }
+  ],
+  "referenceOnly": [
+    { "name": "Taste Skill", "url": "https://github.com/Leonxlnx/taste-skill", "reason": "art-direction principles applied; skill installer requires Claude Code skill host and does not exist in this harness" },
+    { "name": "Impeccable", "url": "https://github.com/pbakaus/impeccable", "reason": "design-language principles applied; not installable here" },
+    { "name": "UI UX Pro Max", "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill", "reason": "pattern reference only" },
+    { "name": "Cloudflare Security Audit Skill", "url": "https://github.com/cloudflare/security-audit-skill", "reason": "guidance-first; checklist applied manually" },
+    { "name": "OWASP ASVS 5.0", "url": "https://owasp.org/www-project-application-security-verification-standard/", "reason": "security verification reference" },
+    { "name": "WCAG 2.2", "url": "https://www.w3.org/TR/WCAG22/", "reason": "accessibility acceptance reference" },
+    { "name": "HL7 FHIR R5", "url": "https://hl7.org/fhir/", "reason": "interoperability mapping reference" }
+  ],
+  "blocked": [
+    { "name": "REA", "url": "https://github.com/morluto/rea", "reason": "requires Node 22 + an MCP-capable host; this harness has no MCP host and egress to the required runtime providers is limited" },
+    { "name": "Playwright MCP / Playwright CLI", "url": "https://github.com/microsoft/playwright-mcp", "reason": "browser binary download host is not reachable; cannot execute E2E or visual regression here" },
+    { "name": "Context7", "url": "https://github.com/upstash/context7", "reason": "targets a different agent host; unnecessary for pinned .NET 10 APIs" },
+    { "name": "Serena", "url": "https://github.com/oraios/serena", "reason": "uv/MCP based; no MCP host available" }
+  ],
+  "notApplicable": [
+    { "name": "Microsoft TRELLIS.2", "reason": "3D generation is outside this project" },
+    { "name": "Coolify", "reason": "no deployment target authorised" },
+    { "name": "CleanYourTV", "reason": "device-specific, unrelated" },
+    { "name": "LinkedIn skills", "reason": "account actions not requested" }
+  ],
+  "packagesAdded": [],
+  "secretsUsed": "none",
+  "approvalsRequested": "none (no consequential actions taken)"
+}

@@ -1,0 +1,198 @@
+@model Hospital.DAL.Entities.Patient
+@{
+    var encounters = (Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.EncounterListItem>)ViewBag.Encounters;
+    var labs = (Hospital.BLL.Common.PagedResult<Hospital.DAL.Entities.Diagnostics.LabOrder>)ViewBag.Labs;
+    var invoices = (IReadOnlyList<Hospital.BLL.Services.Abstraction.InvoiceListItem>)ViewBag.Invoices;
+    bool canEncounter = ViewBag.CanCreateEncounter;
+    bool canEdit = User.HasClaim(AppClaimTypes.Permission, Hospital.BLL.Permissions.Permission.PatientEdit);
+}
+
+@section PageActions {
+    @if (canEncounter)
+    {
+        <form asp-action="StartEncounter" asp-route-id="@Model.Id" method="post" style="display:flex;gap:var(--space-2);align-items:center">
+            <select class="select select--sm" name="type" aria-label="Encounter type">
+                <option value="Outpatient">Outpatient</option>
+                <option value="Emergency">Emergency</option>
+                <option value="Inpatient">Inpatient</option>
+            </select>
+            <input class="input input--sm" name="complaint" placeholder="Chief complaint" aria-label="Chief complaint" />
+            <button class="btn btn--primary" type="submit">Start encounter</button>
+        </form>
+    }
+}
+
+<div class="split-grid">
+    <div class="stack">
+        <section class="card card--flush" aria-labelledby="encounters-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="encounters-heading">Recent encounters</h2>
+                    <p class="card__subtitle">@encounters.TotalCount total</p>
+                </div>
+                <a class="link" asp-controller="Encounters" asp-action="Index" asp-route-patientId="@Model.Id">All encounters</a>
+            </div>
+            @if (encounters.Items.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("No encounters", "Start an encounter to begin a clinical record for this patient.", "stethoscope"))" />
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th scope="col">Encounter</th><th scope="col">Date</th><th scope="col">Clinician</th><th scope="col">Department</th><th scope="col">Status</th><th scope="col" class="actions"></th></tr></thead>
+                        <tbody>
+                            @foreach (var item in encounters.Items)
+                            {
+                                var status = Hospital.BLL.Common.StatusTone.Encounter(item.Status);
+                                <tr>
+                                    <td class="mono">@item.Number</td>
+                                    <td class="nowrap">@item.RegisteredAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@(item.DoctorName ?? "—")</td>
+                                    <td>@(item.Department ?? "—")</td>
+                                    <td><partial name="_StatusBadge" model="status" /></td>
+                                    <td class="actions"><a class="btn btn--sm" asp-controller="Encounters" asp-action="Details" asp-route-id="@item.Id">Open</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="card card--flush" aria-labelledby="labs-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="labs-heading">Laboratory</h2>
+                    <p class="card__subtitle">Only released results are clinically final</p>
+                </div>
+                <a class="link" asp-controller="Laboratory" asp-action="Index" asp-route-patientId="@Model.Id">Laboratory workspace</a>
+            </div>
+            @if (labs.Items.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("No laboratory orders", "Orders created during an encounter appear here.", "flask"))" />
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th scope="col">Order</th><th scope="col">Ordered</th><th scope="col">Status</th><th scope="col" class="actions"></th></tr></thead>
+                        <tbody>
+                            @foreach (var order in labs.Items)
+                            {
+                                var status = Hospital.BLL.Common.StatusTone.Lab(order.Status);
+                                <tr>
+                                    <td class="mono">@order.Number</td>
+                                    <td class="nowrap">@order.CreatedAtUtc.ToString("yyyy-MM-dd")</td>
+                                    <td><partial name="_StatusBadge" model="status" /></td>
+                                    <td class="actions"><a class="btn btn--sm" asp-controller="Laboratory" asp-action="Details" asp-route-id="@order.Id">View</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+
+    <div class="stack">
+        <section class="card" aria-labelledby="identity-heading">
+            <div class="card__header"><h2 class="card__title" id="identity-heading">Patient record</h2></div>
+            <div class="card__body">
+                <dl class="dl">
+                    <dt>MRN</dt><dd class="mono">@(Model.Mrn ?? "—")</dd>
+                    <dt>Name</dt><dd>@Model.FirstName @Model.LastName</dd>
+                    <dt>Sex</dt><dd>@(Model.Gender ?? "—")</dd>
+                    <dt>Date of birth</dt><dd>@(Model.DateOfBirth?.ToString("yyyy-MM-dd") ?? "—")</dd>
+                    <dt>Blood group</dt><dd>@(Model.BloodGroup ?? "—")</dd>
+                    <dt>Phone</dt><dd>@(Model.PhoneNumber ?? "—")</dd>
+                    <dt>Email</dt><dd>@(Model.Email ?? "—")</dd>
+                    <dt>Address</dt><dd>@(Model.Address ?? "—")</dd>
+                    <dt>Emergency contact</dt><dd>@(Model.EmergencyContact ?? "—")</dd>
+                    <dt>Registered</dt><dd>@Model.CreatedAt.ToString("yyyy-MM-dd")</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="allergy-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="allergy-heading">Allergies</h2>
+                    <p class="card__subtitle">Shown to every clinician before prescribing</p>
+                </div>
+            </div>
+            <div class="card__body">
+                @if (Model.Allergies.Count == 0)
+                {
+                    <p class="card__subtitle" style="margin:0">No allergies recorded. Confirm with the patient and record any new allergy.</p>
+                }
+                else
+                {
+                    <div class="stack" style="gap:var(--space-2)">
+                        @foreach (var allergy in Model.Allergies.OrderByDescending(a => a.Severity))
+                        {
+                            var tone = allergy.Severity == Hospital.DAL.Entities.AllergySeverity.Severe ? "danger" : allergy.Severity == Hospital.DAL.Entities.AllergySeverity.Moderate ? "warning" : "muted";
+                            <div class="care-tile">
+                                <span class="care-tile__icon" style="background:var(--danger-050);color:var(--danger-700)">
+                                    <partial name="_Icon" model="@("alert")" />
+                                </span>
+                                <span>
+                                    <span class="care-tile__title">@allergy.Substance</span>
+                                    <span class="care-tile__meta">@(allergy.Reaction ?? "Reaction not recorded")</span>
+                                </span>
+                                <span class="badge badge--@tone" style="margin-left:auto">@allergy.Severity</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (canEdit)
+                {
+                    <form asp-action="AddAllergy" asp-route-id="@Model.Id" method="post" style="margin-top:var(--space-4);display:grid;gap:var(--space-2)">
+                        <input class="input input--sm" name="substance" placeholder="Substance" required aria-label="Allergy substance" />
+                        <input class="input input--sm" name="reaction" placeholder="Reaction (optional)" aria-label="Allergy reaction" />
+                        <div style="display:flex;gap:var(--space-2)">
+                            <select class="select select--sm" name="severity" aria-label="Severity">
+                                <option value="Mild">Mild</option>
+                                <option value="Moderate" selected>Moderate</option>
+                                <option value="Severe">Severe</option>
+                            </select>
+                            <button class="btn btn--sm" type="submit">Record allergy</button>
+                        </div>
+                    </form>
+                }
+            </div>
+        </section>
+
+        @if (Model.MedicalHistory is not null)
+        {
+            <section class="card">
+                <div class="card__header"><h2 class="card__title">Documented history</h2></div>
+                <div class="card__body"><p style="margin:0;white-space:pre-line">@Model.MedicalHistory</p></div>
+            </section>
+        }
+
+        @if (invoices.Count > 0)
+        {
+            <section class="card card--flush">
+                <div class="card__header"><h2 class="card__title">Billing</h2></div>
+                <div class="table-wrap">
+                    <table class="table table--compact">
+                        <thead><tr><th scope="col">Invoice</th><th scope="col" class="num">Balance</th><th scope="col">Status</th></tr></thead>
+                        <tbody>
+                            @foreach (var invoice in invoices)
+                            {
+                                var status = Hospital.BLL.Common.StatusTone.Invoice(invoice.Status);
+                                <tr>
+                                    <td class="mono">@invoice.Number</td>
+                                    <td class="num">@Hospital.BLL.Common.Money.Format(invoice.Balance)</td>
+                                    <td><partial name="_StatusBadge" model="status" /></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+    </div>
+</div>

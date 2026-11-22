@@ -1,0 +1,94 @@
+@model Hospital.BLL.ModelVM.RegisterPatientVm
+
+<div class="card">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Patient details</h2>
+            <p class="card__subtitle">Only the fields needed to identify and contact the patient are required.</p>
+        </div>
+    </div>
+    <form asp-action="Create" method="post" novalidate>
+        <div class="card__body">
+            <div asp-validation-summary="ModelOnly" class="notice notice--danger" style="margin-bottom:var(--space-4)"></div>
+
+            <div class="form-grid">
+                <div class="field">
+                    <label class="field__label" asp-for="FirstName">First name <span class="req">*</span></label>
+                    <input class="input" asp-for="FirstName" autocomplete="given-name" />
+                    <span class="field__error" asp-validation-for="FirstName"></span>
+                </div>
+                <div class="field">
+                    <label class="field__label" asp-for="LastName">Last name <span class="req">*</span></label>
+                    <input class="input" asp-for="LastName" autocomplete="family-name" />
+                    <span class="field__error" asp-validation-for="LastName"></span>
+                </div>
+                <div class="field">
+                    <label class="field__label" asp-for="Email">Email <span class="req">*</span></label>
+                    <input class="input" asp-for="Email" type="email" autocomplete="email" />
+                    <span class="field__hint">Used for portal access and appointment notifications.</span>
+                    <span class="field__error" asp-validation-for="Email"></span>
+                </div>
+                <div class="field">
+                    <label class="field__label" asp-for="PhoneNumber">Phone</label>
+                    <input class="input" asp-for="PhoneNumber" type="tel" autocomplete="tel" />
+                    <span class="field__error" asp-validation-for="PhoneNumber"></span>
+                </div>
+                <div class="field">
+                    <label class="field__label" asp-for="DateOfBirth">Date of birth</label>
+                    <input class="input" asp-for="DateOfBirth" type="date" />
+                    <span class="field__error" asp-validation-for="DateOfBirth"></span>
+                </div>
+                <div class="field">
+                    <label class="field__label" asp-for="Sex">Sex</label>
+                    <select class="select" asp-for="Sex" asp-items="Html.GetEnumSelectList<Hospital.DAL.Entities.Clinical.PatientSex>()"></select>
+                </div>
+                <div class="field">
+                    <label class="field__label" asp-for="BloodGroup">Blood group</label>
+                    <select class="select" asp-for="BloodGroup">
+                        <option value="">Not recorded</option>
+                        @foreach (var group in new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" })
+                        {
+                            <option value="@group">@group</option>
+                        }
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field__label" asp-for="EmergencyContact">Emergency contact</label>
+                    <input class="input" asp-for="EmergencyContact" placeholder="Name and phone" />
+                </div>
+                <div class="field span-2">
+                    <label class="field__label" asp-for="Address">Address</label>
+                    <input class="input" asp-for="Address" autocomplete="street-address" />
+                </div>
+                <div class="field span-2">
+                    <label class="field__label" asp-for="MedicalHistory">Documented history</label>
+                    <textarea class="textarea" asp-for="MedicalHistory" rows="3" placeholder="Long-term conditions, previous surgery, or 'none documented'."></textarea>
+                </div>
+            </div>
+
+            <div class="notice notice--info" style="margin-top:var(--space-5)">
+                <partial name="_Icon" model="@("info")" />
+                <div>
+                    <div class="notice__title">Duplicate protection</div>
+                    If a patient with the same name and date of birth or phone number already exists, registration is
+                    paused so the record can be checked before creating a second chart.
+                </div>
+            </div>
+
+            @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey(nameof(Model.ConfirmDuplicate)))
+            {
+                <div class="notice notice--warning" style="margin-top:var(--space-4)">
+                    <partial name="_Icon" model="@("alert")" />
+                    <label class="checkbox">
+                        <input asp-for="ConfirmDuplicate" />
+                        <span>I have checked and confirm this is a different patient.</span>
+                    </label>
+                </div>
+            }
+        </div>
+        <div class="card__footer" style="display:flex;justify-content:flex-end;gap:var(--space-2)">
+            <a class="btn" asp-action="Index">Cancel</a>
+            <button class="btn btn--primary" type="submit" data-submitting-label="Registering…">Register patient</button>
+        </div>
+    </form>
+</div>

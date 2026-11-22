@@ -35,7 +35,8 @@ public sealed record ReportFilter(
     string? Status = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    CancellationToken CancellationToken = default);
 
 public sealed record ReportDescriptor(string Key, string Title, string Description, string Permission);
 
@@ -50,4 +51,7 @@ public interface IReportService
     Task<ReportResult> RunAsync(string key, ReportFilter filter, CancellationToken cancellationToken = default);
 
     string ToCsv(ReportResult report);
+
+    /// <summary>Resolves a report descriptor, or null when the key is unknown.</summary>
+    ReportDescriptor? Find(string key);
 }

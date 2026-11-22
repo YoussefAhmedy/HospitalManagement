@@ -1,0 +1,54 @@
+@model IReadOnlyList<Hospital.BLL.Services.Abstraction.ReportDescriptor>
+@{
+    var groups = new (string Title, string[] Keys, string Icon)[]
+    {
+        ("Patient & clinical", new[] { "patient-visits", "encounters" }, "patients"),
+        ("Operations", new[] { "appointments-status", "no-shows", "admissions", "bed-occupancy", "department-workload" }, "activity"),
+        ("Laboratory", new[] { "lab-throughput", "lab-pending", "lab-tests", "lab-critical" }, "flask"),
+        ("Financial", new[] { "revenue", "revenue-department", "outstanding", "payments" }, "invoice"),
+        ("Inventory & pharmacy", new[] { "inventory", "expiry", "prescriptions" }, "box")
+    };
+}
+<p class="card__subtitle" style="margin-bottom:var(--space-5);max-width:70ch">
+    Every report runs a live database query and includes the generation timestamp, the active filters and a
+    summary block. CSV export and a print-friendly layout are available on each report. Access is granted per
+    report by permission, so financial reports are only visible to billing, management and administration roles.
+</p>
+
+<div class="stack">
+    @foreach (var group in groups)
+    {
+        var items = Model.Where(report => group.Keys.Contains(report.Key)).ToList();
+        if (items.Count == 0)
+        {
+            continue;
+        }
+        <section class="card card--flush" aria-labelledby="group-@group.Keys[0]">
+            <div class="card__header">
+                <div style="display:flex;align-items:center;gap:var(--space-3)">
+                    <span class="state__icon" style="width:34px;height:34px;border-radius:var(--radius-sm)"><partial name="_Icon" model="@group.Icon" /></span>
+                    <h2 class="card__title" id="group-@group.Keys[0]">@group.Title</h2>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr><th scope="col">Report</th><th scope="col">What it answers</th><th scope="col" class="actions">Open</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var report in items)
+                        {
+                            <tr>
+                                <td class="strong">@report.Title</td>
+                                <td class="muted">@report.Description</td>
+                                <td class="actions">
+                                    <a class="btn btn--sm" asp-action="Run" asp-route-key="@report.Key">Run report</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>

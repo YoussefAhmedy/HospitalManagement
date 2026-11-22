@@ -44,8 +44,12 @@ public sealed class ReportService(HospitalDbContext dbContext) : IReportService
 
     private static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-US");
 
+    public ReportDescriptor? Find(string key) =>
+        Catalogue.FirstOrDefault(report => string.Equals(report.Key, key, StringComparison.OrdinalIgnoreCase));
+
     public async Task<ReportResult> RunAsync(string key, ReportFilter filter, CancellationToken cancellationToken = default)
     {
+        cancellationToken = cancellationToken == default ? filter.CancellationToken : cancellationToken;
         var page = Math.Max(1, filter.Page);
         var size = filter.PageSize is < 1 or > 200 ? 50 : filter.PageSize;
 

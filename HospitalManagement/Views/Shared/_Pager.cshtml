@@ -1,0 +1,24 @@
+@model HospitalManagement.Models.PagerModel
+@if (Model.TotalPages > 1)
+{
+    var windowStart = Math.Max(1, Model.Page - 2);
+    var windowEnd = Math.Min(Model.TotalPages, windowStart + 4);
+    windowStart = Math.Max(1, windowEnd - 4);
+    <nav class="pager" aria-label="Pagination">
+        <a class="pager__link @(Model.Page <= 1 ? "is-disabled" : "")" aria-label="Previous page"
+           asp-all-route-data="@Model.RouteValues.WithPage(Model.Page - 1)">‹</a>
+        @for (var page = windowStart; page <= windowEnd; page++)
+        {
+            if (page == Model.Page)
+            {
+                <span class="pager__current" aria-current="page">@page</span>
+            }
+            else
+            {
+                <a class="pager__link" asp-all-route-data="@Model.RouteValues.WithPage(page)">@page</a>
+            }
+        }
+        <a class="pager__link @(Model.Page >= Model.TotalPages ? "is-disabled" : "")" aria-label="Next page"
+           asp-all-route-data="@Model.RouteValues.WithPage(Model.Page + 1)">›</a>
+    </nav>
+}

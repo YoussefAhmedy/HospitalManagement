@@ -1,0 +1,138 @@
+@{
+    var kpis = ViewBag.Kpis as IReadOnlyList<Hospital.BLL.Services.Abstraction.Kpi> ?? new List<Hospital.BLL.Services.Abstraction.Kpi>();
+    var occupancy = (Hospital.BLL.Services.Abstraction.OccupancySummary)ViewBag.Occupancy;
+    var recent = (IReadOnlyList<Hospital.BLL.Services.Abstraction.ActivityItem>)ViewBag.Recent;
+    var outcomes = (Hospital.BLL.Services.Abstraction.ReportResult)ViewBag.AppointmentOutcomes;
+    var revenue = (Hospital.BLL.Services.Abstraction.ReportResult)ViewBag.Revenue;
+    var maxOutcome = outcomes.Rows.Select(r => int.TryParse(r[1], out var v) ? v : 0).DefaultIfEmpty(1).Max();
+    var maxRevenue = revenue.Rows.Select(r => double.TryParse(r.ElementAtOrDefault(3), out var v) ? v : 0).DefaultIfEmpty(1).Max();
+}
+
+<partial name="_KpiGrid" model="kpis" />
+
+<div class="split-grid">
+    <section class="card" aria-labelledby="flow-heading">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="flow-heading">Appointment outcomes</h2>
+                <p class="card__subtitle">@outcomes.FilterSummary · generated @outcomes.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+            </div>
+            <a class="link" asp-controller="Reports" asp-action="Run" asp-route-key="appointments-status">Full report</a>
+        </div>
+        <div class="card__body">
+            @if (outcomes.Rows.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("No appointments yet", "Outcomes appear once visits are booked in this period.", "calendar"))" />
+            }
+            else
+            {
+                <div class="bar-chart">
+                    @foreach (var row in outcomes.Rows)
+                    {
+                        var count = int.TryParse(row[1], out var value) ? value : 0;
+                        var percent = maxOutcome == 0 ? 0 : Math.Round(count * 100d / maxOutcome, 1);
+                        var tone = row[0] switch
+                        {
+                            "Completed" => "",
+                            "NoShow" or "NotApproved" => "bar-chart__fill--danger",
+                            _ => "bar-chart__fill--warning"
+                        };
+                        <div class="bar-chart__row">
+                            <span class="bar-chart__label">@row[0]</span>
+                            <span class="bar-chart__track"><span class="bar-chart__fill @tone" style="width:@percent%"></span></span>
+                            <span class="bar-chart__value">@count</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="card" aria-labelledby="occupancy-heading">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="occupancy-heading">Bed occupancy</h2>
+                <p class="card__subtitle">Live capacity across active beds</p>
+            </div>
+            <a class="link" asp-controller="Admissions" asp-action="Index">Bed board</a>
+        </div>
+        <div class="card__body">
+            <div class="kpi__value">@occupancy.OccupancyPercent%</div>
+            <p class="kpi__hint">@occupancy.Occupied of @occupancy.TotalBeds beds occupied</p>
+            <div class="occupancy" style="margin-top:var(--space-4)">
+                <div class="occupancy__bar" role="img" aria-label="@occupancy.Occupied of @occupancy.TotalBeds beds occupied">
+                    <span class="occupancy__fill" style="width:@occupancy.OccupancyPercent%"></span>
+                </div>
+                <dl class="dl">
+                    <dt>Awaiting bed</dt><dd>@occupancy.PendingAdmissions</dd>
+                    <dt>Discharges today</dt><dd>@occupancy.DischargesToday</dd>
+                    <dt>Available beds</dt><dd>@(occupancy.TotalBeds - occupancy.Occupied)</dd>
+                </dl>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="split-grid">
+    <section class="card" aria-labelledby="revenue-heading">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="revenue-heading">Net revenue, last 14 days</h2>
+                <p class="card__subtitle">@revenue.Summary.FirstOrDefault(s => s.Key == "Net revenue").Value · approved payments only</p>
+            </div>
+            <a class="link" asp-controller="Reports" asp-action="Run" asp-route-key="revenue">Full report</a>
+        </div>
+        <div class="card__body">
+            @if (revenue.Rows.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("No payments recorded", "Revenue appears once payments are recorded against invoices.", "invoice"))" />
+            }
+            else
+            {
+                <div class="bar-chart">
+                    @foreach (var row in revenue.Rows)
+                    {
+                        var net = double.TryParse(row.ElementAtOrDefault(3), out var value) ? value : 0;
+                        var percent = maxRevenue == 0 ? 0 : Math.Round(net * 100d / maxRevenue, 1);
+                        <div class="bar-chart__row">
+                            <span class="bar-chart__label">@row[0]</span>
+                            <span class="bar-chart__track"><span class="bar-chart__fill" style="width:@Math.Max(0, percent)%"></span></span>
+                            <span class="bar-chart__value">@row.ElementAtOrDefault(3)</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="card" aria-labelledby="activity-heading">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="activity-heading">Recent audited activity</h2>
+                <p class="card__subtitle">Security-relevant events only</p>
+            </div>
+            <a class="link" asp-controller="Audit" asp-action="Index">Audit trail</a>
+        </div>
+        <div class="card__body">
+            @if (recent.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("No activity yet", "Audited actions will appear here.", "shield"))" />
+            }
+            else
+            {
+                <ul class="timeline">
+                    @foreach (var item in recent)
+                    {
+                        <li class="timeline__item">
+                            <span class="timeline__dot" aria-hidden="true"></span>
+                            <span class="timeline__body">
+                                <span class="timeline__title">@item.Title</span>
+                                <span class="timeline__meta">@item.Detail · @item.When</span>
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+</div>

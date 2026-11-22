@@ -1,0 +1,3 @@
+@* Expects a tuple (Label, Tone) in model. *@
+@model (string Label, string Tone)
+<span class="badge badge--@(string.IsNullOrWhiteSpace(Model.Tone) ? "muted" : Model.Tone)">@Model.Label</span>

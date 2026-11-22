@@ -1,0 +1,78 @@
+@{
+    var kpis = ViewBag.Kpis as IReadOnlyList<Hospital.BLL.Services.Abstraction.Kpi> ?? new List<Hospital.BLL.Services.Abstraction.Kpi>();
+    var queue = (Hospital.BLL.Services.Abstraction.DepartmentQueue)ViewBag.Queue;
+}
+
+<partial name="_KpiGrid" model="kpis" />
+
+<div class="split-grid">
+    <section class="card card--flush" aria-labelledby="queue-heading">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="queue-heading">Today's clinic list</h2>
+                <p class="card__subtitle">@queue.CheckedIn checked in · @queue.Confirmed confirmed · @queue.Pending awaiting confirmation</p>
+            </div>
+            <a class="link" asp-controller="Appointments" asp-action="Index">Open scheduler</a>
+        </div>
+        @if (queue.Next.Count == 0)
+        {
+            <partial name="_EmptyState" model="@(("No patients waiting", "Checked-in patients appear here as reception moves them through the clinic.", "inbox"))" />
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table table--compact">
+                    <thead>
+                        <tr>
+                            <th scope="col">Time</th>
+                            <th scope="col">Patient</th>
+                            <th scope="col">MRN</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="actions">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in queue.Next)
+                        {
+                            var status = Hospital.BLL.Common.StatusTone.Appointment(item.Status);
+                            <tr>
+                                <td class="mono nowrap">@(item.SlotMinutes <= 0 ? "—" : $"{item.SlotMinutes / 60:00}:{item.SlotMinutes % 60:00}")</td>
+                                <td class="strong">@item.PatientName</td>
+                                <td class="mono">@item.Mrn</td>
+                                <td><partial name="_StatusBadge" model="status" /></td>
+                                <td class="actions">
+                                    <a class="btn btn--sm" asp-controller="Encounters" asp-action="Index" asp-route-status="Triaged">Open encounter</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <div class="stack">
+        <section class="card" aria-labelledby="clinician-actions">
+            <div class="card__header"><h2 class="card__title" id="clinician-actions">Clinical actions</h2></div>
+            <div class="card__body">
+                <div class="stack" style="gap:var(--space-2)">
+                    <a class="btn btn--primary btn--block" asp-controller="Encounters" asp-action="Index">Open encounter queue</a>
+                    <a class="btn btn--block" asp-controller="Laboratory" asp-action="Index">Review laboratory results</a>
+                    <a class="btn btn--block" asp-controller="Pharmacy" asp-action="Index">Prescription review</a>
+                    <a class="btn btn--block" asp-controller="Reports" asp-action="Index">Clinical reports</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="clinical-note">
+            <div class="card__header"><h2 class="card__title" id="clinical-note">Documentation discipline</h2></div>
+            <div class="card__body">
+                <p class="card__subtitle" style="margin:0">
+                    Encounters can only be signed once completed, with at least one recorded diagnosis and one signed
+                    clinical note. Signed encounters are immutable; corrections are recorded as amendments and keep
+                    the original entry visible.
+                </p>
+            </div>
+        </section>
+    </div>
+</div>

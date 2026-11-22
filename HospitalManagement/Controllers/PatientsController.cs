@@ -118,7 +118,7 @@ public sealed class PatientsController(
             return NotFound();
         }
 
-        var encounters = await encounters.QueryAsync(null, id, null, new DateRange(null, null), null, 1, 8, cancellationToken);
+        var recentEncounters = await encounters.QueryAsync(null, id, null, new DateRange(null, null), null, 1, 8, cancellationToken);
         var labs = await lab.QueryAsync(null, id, new DateRange(null, null), null, 1, 8, cancellationToken);
         var invoices = await billing.QueryAsync(null, new DateRange(null, null), null, 1, 8, cancellationToken);
         var openInvoices = invoices.Items.Where(i => i.PatientName.Contains(patient.LastName, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -129,7 +129,7 @@ public sealed class PatientsController(
         ViewData["Section"] = "Clinical";
         ViewData["Subtitle"] = $"MRN {patient.Mrn ?? "—"} · registered {patient.CreatedAt:yyyy-MM-dd}";
 
-        ViewBag.Encounters = encounters;
+        ViewBag.Encounters = recentEncounters;
         ViewBag.Labs = labs;
         ViewBag.Invoices = openInvoices;
         ViewBag.CanCreateEncounter = User.HasClaim(AppClaimTypes.Permission, Permission.EncounterCreate);

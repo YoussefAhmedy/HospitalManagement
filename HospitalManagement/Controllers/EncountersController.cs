@@ -152,6 +152,9 @@ public sealed class EncountersController(
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    private async Task Flash<T>(Hospital.BLL.Common.Result<T> result, string eventType, string resourceId, string successMessage) =>
+        await Flash(result.As(), eventType, resourceId, successMessage);
+
     private async Task Flash(Hospital.BLL.Common.Result result, string eventType, string resourceId, string successMessage)
     {
         if (!result.Succeeded)
@@ -168,6 +171,9 @@ public sealed class EncountersController(
 
 internal static class ResultExtensions
 {
-    public static Hospital.BLL.Common.Result As<T>(this Hospital.BLL.Common.Result<T> result, Func<T, object?> _) =>
-        result.Succeeded ? Hospital.BLL.Common.Result.Ok() : Hospital.BLL.Common.Result.Fail(result.Error ?? "Failed", result.Code);
+    /// <summary>Drops the payload so a generic result can flow through the shared flash helper.</summary>
+    public static Hospital.BLL.Common.Result As<T>(this Hospital.BLL.Common.Result<T> result) =>
+        result.Succeeded
+            ? Hospital.BLL.Common.Result.Ok()
+            : Hospital.BLL.Common.Result.Fail(result.Error ?? "The action could not be completed.", result.Code);
 }

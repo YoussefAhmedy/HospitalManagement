@@ -1,0 +1,84 @@
+@model Hospital.BLL.Common.PagedResult<Hospital.DAL.Entities.Diagnostics.LabOrder>
+@{
+    string? status = ViewBag.Status;
+    string? term = ViewBag.Term;
+    string? patientId = ViewBag.PatientId;
+    var kpis = (IReadOnlyList<Hospital.BLL.Services.Abstraction.Kpi>)ViewBag.Kpis;
+    var statuses = Enum.GetNames<Hospital.DAL.Entities.Diagnostics.LabOrderStatus>();
+}
+<partial name="_KpiGrid" model="kpis" />
+
+<div class="filter-bar" style="margin-top:var(--space-5)">
+    <form method="get" asp-action="Index" style="display:flex;gap:var(--space-3);align-items:flex-end;flex-wrap:wrap;flex:1">
+        <div class="field field--grow">
+            <label class="field__label" for="term">Search</label>
+            <input class="input input--sm" id="term" name="term" value="@term" type="search" placeholder="Order number, patient or MRN" />
+        </div>
+        <div class="field">
+            <label class="field__label" for="status">Status</label>
+            <select class="select select--sm" id="status" name="status">
+                <option value="">All states</option>
+                @foreach (var option in statuses)
+                {
+                    <option value="@option" selected="@(status == option)">@System.Text.RegularExpressions.Regex.Replace(option, "(\\B[A-Z])", " $1")</option>
+                }
+            </select>
+        </div>
+        @if (patientId is not null)
+        {
+            <input type="hidden" name="patientId" value="@patientId" />
+        }
+        <button class="btn btn--primary btn--sm" type="submit">Apply</button>
+        <a class="btn btn--quiet btn--sm" asp-action="Index">Reset</a>
+    </form>
+</div>
+
+<div class="card card--flush">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Laboratory orders</h2>
+            <p class="card__subtitle">@Model.TotalCount order@(Model.TotalCount == 1 ? "" : "s") · a result is only final once released</p>
+        </div>
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <partial name="_EmptyState" model="@(("No laboratory orders", "Orders created from an encounter appear here.", "flask"))" />
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Order</th>
+                        <th scope="col">Patient</th>
+                        <th scope="col">Specimen</th>
+                        <th scope="col">Ordered</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Items)
+                    {
+                        var badge = Hospital.BLL.Common.StatusTone.Lab(order.Status);
+                        <tr>
+                            <td class="mono">@order.Number</td>
+                            <td class="strong">@order.Patient?.FirstName @order.Patient?.LastName<span class="table__sub">@order.Patient?.Mrn</span></td>
+                            <td class="mono">@(order.SpecimenId ?? "—")</td>
+                            <td class="nowrap muted">@order.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><partial name="_StatusBadge" model="badge" /></td>
+                            <td class="actions"><a class="btn btn--sm" asp-action="Details" asp-route-id="@order.Id">Open</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <span>Showing @(((Model.Page - 1) * Model.PageSize) + 1)–@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) of @Model.TotalCount</span>
+            <partial name="_Pager" model="@HospitalManagement.Models.PagerModel.From(
+                new Dictionary<string, string?> { ["term"] = term, ["status"] = status, ["patientId"] = patientId, ["pageSize"] = Model.PageSize.ToString() },
+                Model.Page, Model.TotalPages, Model.TotalCount, Model.PageSize)" />
+        </div>
+    }
+</div>

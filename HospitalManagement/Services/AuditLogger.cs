@@ -1,3 +1,4 @@
+using Hospital.BLL.Services.Abstraction;
 using Hospital.DAL.DataBase;
 using Hospital.DAL.Entities;
 
@@ -34,8 +35,7 @@ public sealed class AuditLogger(
         }
         catch (Exception exception)
         {
-            // The exception is retained for server-side diagnosis; event fields contain
-            // identifiers only and no medical payload, email, token, or request body.
+            // Retained for server-side diagnosis; no clinical payload is ever written here.
             logger.LogError(exception, "Audit event persistence failed for event type {EventType}.", eventType);
             throw;
         }

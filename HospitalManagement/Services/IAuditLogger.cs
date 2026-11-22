@@ -1,13 +1,11 @@
+using Hospital.BLL.Services.Abstraction;
+
 namespace HospitalManagement.Services;
 
-/// <summary>Persists minimal audit metadata; never pass clinical content or credentials.</summary>
-public interface IAuditLogger
+/// <summary>
+/// Kept for compatibility with existing constructors; the contract lives in the business
+/// layer so every new workspace depends on the same abstraction.
+/// </summary>
+public interface IAuditLogger : Hospital.BLL.Services.Abstraction.IAuditLogger
 {
-    Task RecordAsync(
-        string eventType,
-        string? actorUserId,
-        string? subjectUserId = null,
-        string? resourceType = null,
-        string? resourceId = null,
-        CancellationToken cancellationToken = default);
 }

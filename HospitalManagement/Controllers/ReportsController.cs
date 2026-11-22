@@ -3,6 +3,7 @@ using System.Text;
 using Hospital.BLL.Common;
 using Hospital.BLL.Permissions;
 using Hospital.BLL.Services.Abstraction;
+using HospitalManagement.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

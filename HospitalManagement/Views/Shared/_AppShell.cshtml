@@ -7,7 +7,7 @@
     var title = ViewData["Title"] as string ?? "Workspace";
     var eyebrow = ViewData["Eyebrow"] as string;
     var subtitle = ViewData["Subtitle"] as string;
-    var section = ViewData["Section"] as string;
+    var sectionName = ViewData["Section"] as string;
     var userName = User.FindFirst(ClaimTypes.GivenName)?.Value
         ?? User.Identity?.Name?.Split('@')[0]
         ?? "Account";
@@ -191,9 +191,9 @@
 
                 <nav class="topbar__crumbs" aria-label="Breadcrumb">
                     <a asp-controller="Home" asp-action="Index">CareAxis</a>
-                    @if (!string.IsNullOrWhiteSpace(section))
+                    @if (!string.IsNullOrWhiteSpace(sectionName))
                     {
-                        <span class="sep" aria-hidden="true">/</span><span>@section</span>
+                        <span class="sep" aria-hidden="true">/</span><span>@sectionName</span>
                     }
                     <span class="sep" aria-hidden="true">/</span><strong aria-current="page">@title</strong>
                 </nav>

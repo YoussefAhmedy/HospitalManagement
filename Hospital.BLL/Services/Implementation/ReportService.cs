@@ -163,7 +163,7 @@ public sealed class ReportService(HospitalDbContext dbContext) : IReportService
 
         var data = rows.Select(r => (IReadOnlyList<string>)
         [
-            r.Number, r.Date.ToString("yyyy-MM-dd HH:mm", Culture, CultureInfo.InvariantCulture),
+            r.Number, r.Date.ToString("yyyy-MM-dd HH:mm", Culture),
             r.Patient, r.Doctor, r.Department, r.Type.ToString(), r.Status.ToString()
         ]).ToList();
 

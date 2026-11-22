@@ -23,6 +23,7 @@ public class HospitalDbContext(DbContextOptions<HospitalDbContext> options)
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Schedule> Schedules => Set<Schedule>();
     public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<Specialization> Specializations => Set<Specialization>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     // Organisation

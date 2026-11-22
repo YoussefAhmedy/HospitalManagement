@@ -35,7 +35,7 @@ public class VitalSign
     [Range(50, 300)]
     public decimal? HeightCm { get; set; }
 
-    [Range(0.5m, 500)]
+    [Range(0.5, 500)]
     public decimal? WeightKg { get; set; }
 
     [Range(0, 10)]

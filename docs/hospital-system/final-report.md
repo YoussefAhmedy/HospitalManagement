@@ -23,7 +23,7 @@ section states the exact run of record.
 | Permissions in the catalogue | 0 | 43 (39 enforced, 4 reserved) |
 | Domain entities | 8 | 36 |
 | Reports | 0 | 18 |
-| Automated tests | 5 | 69 |
+| Automated tests | 5 | 70 |
 | Documentation | 3 files | 16 documents |
 
 The result is a hospital platform where a receptionist books a slot a clinician cannot be
@@ -170,15 +170,17 @@ file storage, and an isolation test suite. Full reasoning in
 | `EncounterAndPermissionTests` | 14 | pass |
 | `LocalisationTests` | 4 | pass |
 | `ViewHygieneTests` | 7 | pass |
-| `AuthorizationCoverageTests` | 10 | pass |
+| `AuthorizationCoverageTests` | 11 | pass |
 | `ResourceOwnershipTests` | 1 | pass |
-| **Total** | **69** | **pass** |
+| **Total** | **70** | **pass** |
 
-**Sixteen defects** were found and fixed by this loop, six of which would have caused silent
+**Eighteen defects** were found and fixed by this loop, seven of which would have caused silent
 misbehaviour rather than a compile error — including every doctor lookup returning an empty
 identifier, dead client-side validation, an application that could not start against a fresh
 database, and a patient chart that assembled a patient's invoices by matching their surname — which
-would have shown a namesake's financial record. They are listed with their detection method in `test-plan.md` §5.
+would have shown a namesake's financial record. The last two were found in the final reconciliation
+pass, by comparing what the documentation claimed against what the code actually did rather than by
+running anything. They are listed with their detection method in `test-plan.md` §5.
 
 ### Not verified, and why
 

@@ -22,7 +22,7 @@ model enforced on every request.
 | **Modules** | Patients · Appointments · Encounters · Laboratory · Radiology · Pharmacy · Admissions & beds · Billing · Reports · Audit |
 | **Reports** | 18, all backed by live queries, with paging, CSV export and print |
 | **Languages** | English (LTR) and Arabic (RTL), switchable at runtime |
-| **Tests** | 69 unit tests across nine suites, run on every push |
+| **Tests** | 70 unit tests across nine suites, run on every push |
 
 ## Try it
 

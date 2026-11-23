@@ -29,7 +29,7 @@ that the invariants that matter are testable without a database.
         ├───────────────────────────────────────────────┤
         │  Not executed: repository integration tests   │  ← needs SQL Server
         ├───────────────────────────────────────────────┤
-        │  Executed: 69 pure-unit tests, 190+ assertions │  ← runs on every push
+        │  Executed: 70 pure-unit tests, 190+ assertions │  ← runs on every push
         └───────────────────────────────────────────────┘
 ```
 
@@ -58,8 +58,8 @@ test boundary there gives high defect detection per test and no infrastructure c
 | `LocalisationTests` | 4 | Every key translated to Arabic, unknown-key fallback, RTL detection, regional-culture resolution |
 | `ResourceOwnershipTests` | 1 | Ownership predicate rejects null/whitespace/mismatched ids |
 | `ViewHygieneTests` | 7 | No inline script, no inline event handlers, no hard-coded colours, no unencoded HTML outside the icon catalogue, no duplicate `Scripts` section, no reference to the retired layout partials, no patient data scoped by display name |
-| `AuthorizationCoverageTests` | 10 | Every one of the 120 actions is authorised or on a reviewed public list; no controller mixes `[AllowAnonymous]` with `[Authorize]`; no action is both; every policy is built from a `Permission` constant; the catalogue is exactly 43 permissions, matches `Permission.All`, has no duplicate values, and only the four declared reserved permissions are unenforced |
-| **Total** | **69** | |
+| `AuthorizationCoverageTests` | 11 | Every one of the 120 actions is authorised or on a reviewed public list; no controller mixes `[AllowAnonymous]` with `[Authorize]`; no action is both; every policy is built from a `Permission` constant; the catalogue is exactly 43 permissions, matches `Permission.All`, has no duplicate values, only the four declared reserved permissions are unenforced, and the **602-cell grant matrix in the documentation matches the code cell for cell** |
+| **Total** | **70** | |
 
 ### What the authorisation audit does and does not prove
 
@@ -142,6 +142,8 @@ having the loop.
 | 14 | The application called `MigrateAsync()` but no migrations are committed, so a fresh database could not start | Reading start-up code | Centralised `DatabaseSchemaInitializer`: migrations when present, model-created schema in non-production only, hard failure in production |
 | 15 | Eleven inline `<script>` blocks blocked any meaningful CSP | CSP review | Moved to `booking.js`, `invoice.js`, `flash-dismiss.js`; `script-src` tightened to `'self'`; six dead legacy blocks removed |
 | 16 | The patient chart assembled a patient's invoices by matching the **surname substring** against the global invoice list, so two patients sharing a surname would see each other's financial records — and any patient with a unique surname saw an empty list past the first page | Reading `PatientsController.Details` while documenting it | Added `IBillingService.ForPatientAsync(string patientId, …)` filtering on the foreign key; added `NoView_ScopesPatientDataByDisplayName` as a static guard |
+| 17 | The documented grant matrix listed only 32 of 43 permissions and omitted the `Admin` and `Patient` roles entirely; it also reported "384 cells", a figure no current role/permission pairing produces | Deriving the matrix from `RolePermissions` instead of trusting the table | Regenerated all 602 cells from code; added `DocumentedGrantMatrix_MatchesRolePermissionsCode`, which fails if the document and the map ever disagree |
+| 18 | Four permissions (`patient.delete`, `patient.view.sensitive`, `insurance.manage`, `settings.manage`) were documented as controls while no attribute referenced them, so holding one granted nothing | The authorisation audit written in this session | Marked reserved in `Permission.cs` and in the documentation; asserted by two directional tests (unreferenced-but-not-reserved fails, reserved-but-now-enforced also fails) |
 
 The grant matrix in `user-roles-permissions.md` is now machine-checked against `RolePermissions.cs`
 (602 cells, 0 mismatches) rather than maintained by hand.
@@ -154,7 +156,7 @@ The grant matrix in `user-roles-permissions.md` is now machine-checked against `
 |---|---|
 | Pipeline | `.github/workflows/ci.yml` → job `build-and-test` |
 | Steps executed | Restore → Build (Release) → Test → migrations artifact |
-| Result | **All 69 tests pass; build succeeds** |
+| Result | **All 70 tests pass; build succeeds** |
 | Commit | `5635b78` verified green. The tree has advanced since with documentation, security hardening and schema-initialisation changes; the latest green run is recorded in the final report. |
 
 To reproduce the exact status of any commit:

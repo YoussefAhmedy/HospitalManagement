@@ -39,8 +39,8 @@ Sequenced, dependency-aware, with explicit verification gates. Phases follow the
 - **Gate:** documented WCAG 2.2 AA checklist with per-item evidence or explicit gap.
 
 ## Phase 9 — Quality assurance
-- **Delivered:** 69 unit tests across nine suites (slot conflicts, bed occupancy, laboratory release gate, billing ledger, encounter lifecycle, RBAC boundaries, localisation completeness, static view hygiene, authorisation coverage). Recorded in `test-plan.md` with the run of record.
-- **Regression-hunting tooling:** CI now converts failed tests into annotated build errors, so a red build is diagnosable from the API without downloading logs. Sixteen defects were found this way and fixed, plus two more while reconciling documentation against code.
+- **Delivered:** 70 unit tests across nine suites (slot conflicts, bed occupancy, laboratory release gate, billing ledger, encounter lifecycle, RBAC boundaries, localisation completeness, static view hygiene, authorisation coverage). Recorded in `test-plan.md` with the run of record.
+- **Regression-hunting tooling:** CI now converts failed tests into annotated build errors, so a red build is diagnosable from the API without downloading logs. Eighteen defects were found and fixed in total; most through this loop, two in the final reconciliation of documentation against code.
 - **Grant-matrix verification:** the documented permission matrix is machine-compared against the seeded role map (602 cells, 0 mismatches), closing the gap where documentation silently drifts from code.
 - **Not executed:** Playwright/E2E, visual regression, axe accessibility automation, database integration, load tests, penetration test. Each is listed with its blocking prerequisite in `test-plan.md` §7, and the E2E scenarios are specified in §8 so the suite can be built without further design work.
 - **Gate:** CI test summary recorded verbatim. 

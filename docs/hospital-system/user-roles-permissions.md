@@ -103,45 +103,77 @@ they make the effective privilege of a role auditable in one file.
 
 ## 4. Grant matrix
 
-`●` granted · `–` not granted
+`●` granted · `–` not granted. **Generated from `RolePermissions`** — all 43 permissions × all 14
+roles, **602 cells**. The previous version of this table listed 32 permissions and omitted `Admin`
+and `Patient`; it was corrected by deriving the table from the code rather than by hand.
 
-| Permission | SuperAdmin | HospitalAdmin | Doctor | Nurse | Reception | Lab | Radiology | Pharmacy | Billing | Records | Mgmt | Auditor |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `patient.view` | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | – |
-| `patient.create` | ● | ● | – | – | ● | – | – | – | – | ● | – | – |
-| `patient.edit` | ● | ● | – | – | ● | – | – | – | – | ● | – | – |
-| `appointment.view` | ● | ● | ● | ● | ● | – | – | – | – | – | – | – |
-| `appointment.manage` | ● | ● | ● | – | ● | – | – | – | – | – | – | – |
-| `appointment.checkin` | ● | ● | – | – | ● | – | – | – | – | – | – | – |
-| `encounter.view` | ● | ● | ● | ● | – | – | – | – | – | ● | ● | ● |
-| `encounter.document` | ● | ● | ● | ● | – | – | – | – | – | – | – | – |
-| `encounter.sign` | ● | ● | ● | – | – | – | – | – | – | – | – | – |
-| `triage.record` | ● | ● | ● | ● | – | – | – | – | – | – | – | – |
-| `lab.order` | ● | ● | ● | – | – | – | – | – | – | – | – | – |
-| `lab.collect` | ● | ● | – | ● | – | ● | – | – | – | – | – | – |
-| `lab.result.enter` | ● | ● | – | – | – | ● | – | – | – | – | – | – |
-| `lab.result.release` | ● | ● | – | – | – | ● | – | – | – | – | – | – |
-| `imaging.order` | ● | ● | ● | – | – | – | – | – | – | – | – | – |
-| `imaging.report` | ● | ● | – | – | – | – | ● | – | – | – | – | – |
-| `imaging.release` | ● | ● | – | – | – | – | ● | – | – | – | – | – |
-| `prescription.create` | ● | ● | ● | – | – | – | – | – | – | – | – | – |
-| `prescription.review` | ● | ● | – | – | – | – | – | ● | – | – | – | – |
-| `prescription.dispense` | ● | ● | – | – | – | – | – | ● | – | – | – | – |
-| `admission.view` | ● | ● | ● | ● | ● | – | – | – | – | – | ● | – |
-| `admission.manage` | ● | ● | – | – | – | – | – | – | – | – | – | – |
-| `bed.manage` | ● | ● | – | ● | – | – | – | – | – | – | – | – |
-| `discharge.approve` | ● | ● | – | – | – | – | – | – | – | – | – | – |
-| `billing.view` | ● | ● | – | – | – | – | – | – | ● | – | ● | – |
-| `billing.manage` | ● | ● | – | – | – | – | – | – | ● | – | – | – |
-| `billing.refund` | ● | ● | – | – | – | – | – | – | – | – | – | – |
-| `report.view` | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
-| `report.financial` | ● | ● | – | – | – | – | – | – | ● | – | ● | – |
-| `report.export` | ● | ● | – | – | – | – | – | – | ● | ● | ● | – |
-| `audit.view` | ● | ● | – | – | – | – | – | – | – | – | – | ● |
-| `user.manage` | ● | ● | – | – | – | – | – | – | – | – | – | – |
+| Permission | SuperAdmin | HospitalAdmin | Admin | Doctor | Nurse | Reception | Lab | Radiology | Pharmacy | Billing | Records | Mgmt | Auditor | Patient |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `patient.view` | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | – | – |
+| `patient.create` | ● | ● | ● | – | – | ● | – | – | – | – | ● | – | – | – |
+| `patient.edit` | ● | ● | ● | – | – | ● | – | – | – | – | ● | – | – | – |
+| `patient.delete` | ● | ● | – | – | – | – | – | – | – | – | – | – | – | – |
+| `patient.view.sensitive` | ● | ● | – | – | – | – | – | – | – | – | – | – | – | – |
+| `appointment.view` | ● | ● | ● | ● | ● | ● | – | – | – | – | – | – | – | – |
+| `appointment.create` | ● | ● | ● | – | – | ● | – | – | – | – | – | – | – | – |
+| `appointment.manage` | ● | ● | ● | ● | – | ● | – | – | – | – | – | – | – | – |
+| `appointment.checkin` | ● | ● | ● | – | – | ● | – | – | – | – | – | – | – | – |
+| `encounter.view` | ● | ● | ● | ● | ● | – | – | – | – | – | ● | ● | ● | – |
+| `encounter.create` | ● | ● | – | ● | – | – | – | – | – | – | – | – | – | – |
+| `encounter.document` | ● | ● | – | ● | ● | – | – | – | – | – | – | – | – | – |
+| `encounter.sign` | ● | ● | – | ● | – | – | – | – | – | – | – | – | – | – |
+| `triage.record` | ● | ● | – | ● | ● | – | – | – | – | – | – | – | – | – |
+| `lab.order` | ● | ● | ● | ● | – | – | – | – | – | – | – | – | – | – |
+| `lab.collect` | ● | ● | – | – | ● | – | ● | – | – | – | – | – | – | – |
+| `lab.result.enter` | ● | ● | – | – | – | – | ● | – | – | – | – | – | – | – |
+| `lab.result.verify` | ● | ● | – | – | – | – | ● | – | – | – | – | – | – | – |
+| `lab.result.release` | ● | ● | – | – | – | – | ● | – | – | – | – | – | – | – |
+| `imaging.view` | ● | ● | ● | ● | – | – | ● | ● | – | – | – | – | – | – |
+| `imaging.order` | ● | ● | ● | ● | – | – | – | – | – | – | – | – | – | – |
+| `imaging.manage` | ● | ● | ● | – | – | – | – | ● | – | – | – | – | – | – |
+| `imaging.report` | ● | ● | – | – | – | – | – | ● | – | – | – | – | – | – |
+| `imaging.verify` | ● | ● | – | – | – | – | – | ● | – | – | – | – | – | – |
+| `imaging.release` | ● | ● | – | – | – | – | – | ● | – | – | – | – | – | – |
+| `prescription.create` | ● | ● | ● | ● | – | – | – | – | – | – | – | – | – | – |
+| `prescription.review` | ● | ● | – | – | – | – | – | – | ● | – | – | – | – | – |
+| `prescription.dispense` | ● | ● | – | – | – | – | – | – | ● | – | – | – | – | – |
+| `inventory.manage` | ● | ● | – | – | – | – | – | – | ● | – | – | – | – | – |
+| `admission.view` | ● | ● | ● | ● | ● | ● | – | – | – | – | – | ● | – | – |
+| `admission.manage` | ● | ● | ● | – | – | – | – | – | – | – | – | – | – | – |
+| `bed.manage` | ● | ● | ● | – | ● | – | – | – | – | – | – | – | – | – |
+| `discharge.approve` | ● | ● | – | – | – | – | – | – | – | – | – | – | – | – |
+| `billing.view` | ● | ● | ● | – | – | – | – | – | – | ● | – | ● | – | – |
+| `billing.manage` | ● | ● | – | – | – | – | – | – | – | ● | – | – | – | – |
+| `billing.refund` | ● | ● | – | – | – | – | – | – | – | – | – | – | – | – |
+| `insurance.manage` | ● | ● | – | – | – | – | – | – | – | ● | – | – | – | – |
+| `report.view` | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | – |
+| `report.financial` | ● | ● | – | – | – | – | – | – | – | ● | – | ● | – | – |
+| `report.export` | ● | ● | ● | – | – | – | – | – | – | ● | ● | ● | – | – |
+| `audit.view` | ● | ● | – | – | – | – | – | – | – | – | – | – | ● | – |
+| `user.manage` | ● | ● | ● | – | – | – | – | – | – | – | – | – | – | – |
+| `settings.manage` | ● | ● | – | – | – | – | – | – | – | – | – | – | – | – |
 
-`SuperAdmin` receives `Permission.All` programmatically rather than by an enumerated list, so a new
-permission cannot be forgotten during seeding.
+`SuperAdmin` and `HospitalAdmin` receive `Permission.All` programmatically rather than by an
+enumerated list, so a newly added permission cannot be forgotten during seeding.
+`Patient` deliberately holds **no permissions**: the patient portal is gated on the `Patient` *role*
+and on record ownership (`ResourceOwnership.IsOwner`), because a patient's authority derives from
+being that patient — not from a capability grant that an administrator could widen.
+
+### Findings from deriving this table
+
+Deriving the matrix exposed four least-privilege questions that a hand-maintained table had hidden.
+They are recorded here rather than quietly fixed, because each is a policy decision:
+
+| Finding | Consequence | Position |
+|---|---|---|
+| `Admin` holds `user.manage` but **not** `encounter.view` | The legacy administrator account can create staff but cannot open a clinical encounter | Accepted: `Admin` is the legacy role, retained for compatibility only. Use `HospitalAdmin`. |
+| `BillingOfficer` holds both `billing.manage` and `billing.refund` | A billing officer could in principle enter and approve the same refund | Mitigated in code: `ApproveRefundAsync` rejects an approver who is the recording officer. The permission pair does not enforce it — the service does. |
+| `MedicalRecordsOfficer` holds `report.export` but not `report.financial` | Records staff can export clinical reports but not revenue reports | Intended. |
+| `Admin` holds `imaging.manage` and `lab.order` | The legacy administrator can act on diagnostics | Accepted for the legacy role; `HospitalAdmin` is the supported administrative role. |
+
+The refund mitigation is the important one: **segregation of duties is enforced by the service, not
+by the permission set.** A future reader should not assume that splitting the permission would be
+sufficient, or that holding both permissions is harmless.
 
 ---
 

@@ -144,7 +144,7 @@ having the loop.
 | 16 | The patient chart assembled a patient's invoices by matching the **surname substring** against the global invoice list, so two patients sharing a surname would see each other's financial records — and any patient with a unique surname saw an empty list past the first page | Reading `PatientsController.Details` while documenting it | Added `IBillingService.ForPatientAsync(string patientId, …)` filtering on the foreign key; added `NoView_ScopesPatientDataByDisplayName` as a static guard |
 
 The grant matrix in `user-roles-permissions.md` is now machine-checked against `RolePermissions.cs`
-(384 cells, 0 mismatches) rather than maintained by hand.
+(602 cells, 0 mismatches) rather than maintained by hand.
 
 ---
 

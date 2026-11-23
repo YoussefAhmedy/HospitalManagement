@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Hospital.BLL.Helpers;
 using Hospital.BLL.Permissions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -365,5 +366,80 @@ public sealed class AuthorizationCoverageTests
         Assert.AreEqual(0, duplicates.Count,
             "Duplicate permission values collapse two distinct grants into one. Duplicates: " +
             string.Join(", ", duplicates));
+    }
+
+    [TestMethod]
+    public void DocumentedGrantMatrix_MatchesRolePermissionsCode()
+    {
+        // The matrix in the documentation is generated from this map in principle; this test makes
+        // that true in practice. Any hand edit to the table that disagrees with RolePermissions
+        // fails here rather than shipping as a second, contradictory source of truth.
+        var document = Path.Combine(
+            RepositoryRoot(), "docs", "hospital-system", "user-roles-permissions.md");
+        Assert.IsTrue(File.Exists(document), $"The documented grant matrix is missing at {document}.");
+
+        var text = File.ReadAllText(document);
+        var start = text.IndexOf("## 4. Grant matrix", StringComparison.Ordinal);
+        Assert.IsTrue(start >= 0, "The grant matrix section was not found in the roles document.");
+        var end = text.IndexOf("## 5.", start, StringComparison.Ordinal);
+        var section = end > start ? text[start..end] : text[start..];
+
+        var header = Regex.Match(section, @"^\| Permission \|(.+)\|$", RegexOptions.Multiline);
+        Assert.IsTrue(header.Success, "The grant matrix header row was not found.");
+        var columns = header.Groups[1].Value
+            .Split('|', StringSplitOptions.RemoveEmptyEntries)
+            .Select(c => c.Trim())
+            .ToList();
+
+        Assert.AreEqual(14, columns.Count, "The matrix must document all 14 roles.");
+
+        // Column label -> Role enum member.
+        var roleFor = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["SuperAdmin"] = nameof(Role.SuperAdmin),
+            ["HospitalAdmin"] = nameof(Role.HospitalAdmin),
+            ["Admin"] = nameof(Role.Admin),
+            ["Doctor"] = nameof(Role.Doctor),
+            ["Nurse"] = nameof(Role.Nurse),
+            ["Reception"] = nameof(Role.Receptionist),
+            ["Lab"] = nameof(Role.LabTechnician),
+            ["Radiology"] = nameof(Role.Radiologist),
+            ["Pharmacy"] = nameof(Role.Pharmacist),
+            ["Billing"] = nameof(Role.BillingOfficer),
+            ["Records"] = nameof(Role.MedicalRecordsOfficer),
+            ["Mgmt"] = nameof(Role.Management),
+            ["Auditor"] = nameof(Role.Auditor),
+            ["Patient"] = nameof(Role.Patient)
+        };
+
+        var rows = Regex.Matches(section, @"^\| `([a-z][\w.]*)` \|(.+)\|$", RegexOptions.Multiline);
+        Assert.AreEqual(Permission.All.Count, rows.Count, "The matrix must list every permission.");
+
+        var mismatches = new List<string>();
+        foreach (Match row in rows)
+        {
+            var permission = row.Groups[1].Value;
+            var cells = row.Groups[2].Value
+                .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                .Select(c => c.Trim())
+                .ToList();
+
+            Assert.AreEqual(columns.Count, cells.Count,
+                $"Row '{permission}' does not have one cell per role.");
+
+            for (var i = 0; i < columns.Count; i++)
+            {
+                var role = Enum.Parse<Role>(roleFor[columns[i]], ignoreCase: true);
+                var documented = cells[i] == "●";
+                var actual = RolePermissions.For(role).Contains(permission, StringComparer.Ordinal);
+                if (documented != actual)
+                {
+                    mismatches.Add($"{permission} / {columns[i]}: documented={documented}, code={actual}");
+                }
+            }
+        }
+
+        Assert.AreEqual(0, mismatches.Count,
+            "The documented grant matrix disagrees with RolePermissions: " + string.Join("; ", mismatches));
     }
 }

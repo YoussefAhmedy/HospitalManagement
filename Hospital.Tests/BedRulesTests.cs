@@ -39,7 +39,7 @@ public sealed class BedRulesTests
     [TestMethod]
     public void IsOccupied_IsTrueWhileAnyAssignmentIsUnreleased()
     {
-        Assert.IsTrue(BedRules.IsOccupied(BedWith(null).Assignments));
+        Assert.IsTrue(BedRules.IsOccupied(BedWith((DateTime?)null).Assignments));
         Assert.IsFalse(BedRules.IsOccupied(BedWith(new DateTime(2026, 11, 5)).Assignments));
         Assert.IsTrue(BedRules.IsOccupied(BedWith(new DateTime(2026, 11, 5), null).Assignments));
     }
@@ -49,7 +49,7 @@ public sealed class BedRulesTests
     {
         var beds = new[]
         {
-            BedWith(null),
+            BedWith((DateTime?)null),
             BedWith(new DateTime(2026, 11, 2)),
             BedWith(new DateTime(2026, 11, 1), new DateTime(2026, 11, 4), null)
         };
@@ -66,7 +66,7 @@ public sealed class BedRulesTests
     [TestMethod]
     public void OccupancyRate_RoundsToOneDecimalPlace()
     {
-        var beds = new[] { BedWith(null), BedWith(null), BedWith(), };
+        var beds = new[] { BedWith((DateTime?)null), BedWith((DateTime?)null), BedWith(), };
         // 2 of 3 beds occupied.
         Assert.AreEqual(66.7m, BedRules.OccupancyRate(beds));
     }
@@ -74,9 +74,9 @@ public sealed class BedRulesTests
     [TestMethod]
     public void OccupancyRate_IgnoresInactiveBeds()
     {
-        var inactive = BedWith(null);
+        var inactive = BedWith((DateTime?)null);
         inactive.IsActive = false;
-        var beds = new[] { BedWith(null), inactive };
+        var beds = new[] { BedWith((DateTime?)null), inactive };
 
         Assert.AreEqual(100m, BedRules.OccupancyRate(beds));
     }

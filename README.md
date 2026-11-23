@@ -112,7 +112,10 @@ All in [`docs/hospital-system/`](docs/hospital-system):
 | `security-privacy-review.md` | Control inventory, ASVS 5.0 mapping, risk register |
 | `healthcare-standards-mapping.md` | FHIR R5 alignment and the explicit non-conformance position |
 | `test-plan.md` | Test strategy, inventory, defects found, what was **not** run |
+| `patient-examination-report.md` | Draft / reviewed / signed / finalized and what each permits |
 | `commercial-readiness-assessment.md` | Implemented vs demo vs backend-required vs legal review |
+| `project-examination-report.md` | A reviewer's assessment, including the weaknesses |
+| `final-report.md` | The closing report and verdict |
 
 Toolchain artefacts are in [`toolkit-output/`](toolkit-output).
 

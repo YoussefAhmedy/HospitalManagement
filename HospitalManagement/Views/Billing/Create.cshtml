@@ -1,0 +1,60 @@
+@{
+    var patients = (Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.PatientLookupRow>)ViewBag.Patients;
+    string? selected = ViewBag.SelectedPatient;
+    var services = (IReadOnlyList<Hospital.BLL.Services.Abstraction.LookupOption>)ViewBag.Services;
+}
+
+<div class="card">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">New invoice</h2>
+            <p class="card__subtitle">Insurance coverage is applied automatically when an active policy exists.</p>
+        </div>
+    </div>
+    <form asp-action="Create" method="post">
+        <div class="card__body stack" style="gap:var(--space-4)">
+            <div class="field">
+                <label class="field__label" for="patientId">Patient <span class="req">*</span></label>
+                <select class="select" id="patientId" name="patientId" required>
+                    <option value="">Select a patient</option>
+                    @foreach (var patient in patients.Items)
+                    {
+                        <option value="@patient.Id" selected="@(selected == patient.Id)">@patient.Name · @patient.Mrn</option>
+                    }
+                </select>
+            </div>
+            <div class="form-grid">
+                <div class="field span-2">
+                    <label class="field__label" for="serviceItemId">Service</label>
+                    <select class="select" id="serviceItemId" name="serviceItemId">
+                        <option value="">Custom line</option>
+                        @foreach (var service in services)
+                        {
+                            <option value="@service.Id" data-label="@service.Label">@service.Label · @service.Group</option>
+                        }
+                    </select>
+                </div>
+                <div class="field span-2">
+                    <label class="field__label" for="description">Description <span class="req">*</span></label>
+                    <input class="input" id="description" name="description" required />
+                </div>
+                <div class="field">
+                    <label class="field__label" for="quantity">Quantity</label>
+                    <input class="input" id="quantity" name="quantity" type="number" min="1" value="1" />
+                </div>
+                <div class="field">
+                    <label class="field__label" for="unitPrice">Unit price</label>
+                    <input class="input" id="unitPrice" name="unitPrice" type="number" step="0.01" min="0" required />
+                </div>
+            </div>
+        </div>
+        <div class="card__footer" style="display:flex;justify-content:flex-end;gap:var(--space-2)">
+            <a class="btn" asp-action="Index">Cancel</a>
+            <button class="btn btn--primary" type="submit">Issue invoice</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/invoice.js" asp-append-version="true"></script>
+}

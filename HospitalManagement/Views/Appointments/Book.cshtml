@@ -1,0 +1,118 @@
+@{
+    DateTime date = ViewBag.Date;
+    var boards = (IReadOnlyList<Hospital.BLL.Services.Abstraction.DoctorSlotBoard>)ViewBag.Boards;
+    var directory = (Hospital.BLL.Services.Abstraction.OrganizationSnapshot)ViewBag.Directory;
+    var patients = (Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.PatientLookupRow>)ViewBag.Patients;
+    string? selected = ViewBag.SelectedPatient;
+}
+
+<form class="filter-bar" method="get" asp-action="Book">
+    <div class="field" style="max-width:180px">
+        <label class="field__label" for="date">Clinic date</label>
+        <input class="input input--sm" id="date" name="date" type="date" value="@date.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="field">
+        <label class="field__label" for="doctor">Clinician</label>
+        <select class="select select--sm" id="doctor" name="doctorId">
+            <option value="">All clinicians</option>
+            @foreach (var doctor in directory.Doctors)
+            {
+                <option value="@doctor.Id">@doctor.Label</option>
+            }
+        </select>
+    </div>
+    <div class="filter-bar__actions">
+        <button class="btn btn--primary btn--sm" type="submit">Show availability</button>
+    </div>
+</form>
+
+<form method="post" asp-action="Book" asp-route-date="@date.ToString("yyyy-MM-dd")" id="booking-form">
+    <div class="split-grid">
+        <section class="card" aria-labelledby="availability-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="availability-heading">Availability · @date.ToString("ddd dd MMM yyyy")</h2>
+                    <p class="card__subtitle">Slots are derived from each clinician's weekly clinic schedule and booked appointments.</p>
+                </div>
+            </div>
+            <div class="card__body">
+                @if (boards.Count == 0)
+                {
+                    <partial name="_EmptyState" model="@(("No clinics on this date", "This day has no active clinic schedules. Try another date or configure a schedule.", "calendar"))" />
+                }
+                else
+                {
+                    <div class="stack">
+                        @foreach (var board in boards)
+                        {
+                            <div>
+                                <div style="display:flex;align-items:baseline;gap:var(--space-2);margin-bottom:var(--space-2)">
+                                    <strong>Dr. @board.DoctorName</strong>
+                                    <span class="muted">@board.Specialty · @board.SlotMinutes-minute slots · @board.AvailableSlots.Count free</span>
+                                </div>
+                                @if (board.AvailableSlots.Count == 0)
+                                {
+                                    <p class="card__subtitle" style="margin:0">Fully booked for this date.</p>
+                                }
+                                else
+                                {
+                                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                                        @foreach (var slot in board.AvailableSlots)
+                                        {
+                                            var label = $"{slot / 60:00}:{slot % 60:00}";
+                                            <label class="btn btn--sm" style="cursor:pointer">
+                                                <input type="radio" name="slotMinutes" value="@slot" required
+                                                       data-doctor="@board.DoctorId" style="margin-right:6px" />
+                                                @label
+                                            </label>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="booking-heading">
+            <div class="card__header"><h2 class="card__title" id="booking-heading">Booking details</h2></div>
+            <div class="card__body stack" style="gap:var(--space-3)">
+                <div class="field">
+                    <label class="field__label" for="patientId">Patient <span class="req">*</span></label>
+                    <select class="select" id="patientId" name="patientId" required>
+                        <option value="">Select a patient</option>
+                        @foreach (var patient in patients.Items)
+                        {
+                            <option value="@patient.Id" selected="@(selected == patient.Id)">@patient.Name · @patient.Mrn</option>
+                        }
+                    </select>
+                    <span class="field__hint">Patients not listed? Register them first in the patient directory.</span>
+                </div>
+                <div class="field">
+                    <label class="field__label" for="doctorId">Clinician <span class="req">*</span></label>
+                    <select class="select" id="doctorId" name="doctorId" required>
+                        <option value="">Select a clinician</option>
+                        @foreach (var doctor in boards)
+                        {
+                            <option value="@doctor.DoctorId">Dr. @doctor.DoctorName</option>
+                        }
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field__label" for="notes">Notes</label>
+                    <textarea class="textarea" id="notes" name="notes" rows="3" maxlength="500" placeholder="Reason for visit"></textarea>
+                </div>
+                <div class="notice notice--info">
+                    <partial name="_Icon" model="@("info")" />
+                    <div>Booking checks the clinician's slot, clinic hours and daily capacity. Two patients cannot hold the same slot.</div>
+                </div>
+                <button class="btn btn--primary btn--block" type="submit" @(boards.Count == 0 ? "disabled" : "")>Request appointment</button>
+            </div>
+        </section>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/booking.js" asp-append-version="true"></script>
+}

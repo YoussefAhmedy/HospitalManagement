@@ -1,0 +1,120 @@
+@{
+    var kpis = ViewBag.Kpis as IReadOnlyList<Hospital.BLL.Services.Abstraction.Kpi> ?? new List<Hospital.BLL.Services.Abstraction.Kpi>();
+    var queue = ViewBag.Queue as Hospital.BLL.Services.Abstraction.DepartmentQueue;
+    var triage = ViewBag.Triage as Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.EncounterListItem>;
+}
+
+<partial name="_KpiGrid" model="kpis" />
+
+<div class="split-grid">
+    <section class="card card--flush" aria-labelledby="reception-actions">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="reception-actions">Front-desk actions</h2>
+                <p class="card__subtitle">Register patients, review requests and check in arrivals</p>
+            </div>
+        </div>
+        <div class="card__body">
+            <div class="btn-row">
+                <a class="btn btn--primary" asp-controller="Patients" asp-action="Create">
+                    <partial name="_Icon" model="@("plus")" /> Register patient
+                </a>
+                <a class="btn" asp-controller="Appointments" asp-action="Book">
+                    <partial name="_Icon" model="@("calendar")" /> Book appointment
+                </a>
+                <a class="btn" asp-controller="Patients" asp-action="Index">
+                    <partial name="_Icon" model="@("search")" /> Find patient
+                </a>
+                <a class="btn" asp-controller="Appointments" asp-action="Index" asp-route-status="Pending">
+                    <partial name="_Icon" model="@("inbox")" /> Review requests
+                </a>
+            </div>
+        </div>
+    </section>
+
+    @if (queue is not null)
+    {
+        <section class="card card--flush" aria-labelledby="today-flow">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="today-flow">Today's flow</h2>
+                    <p class="card__subtitle">@queue.CheckedIn checked in · @queue.Confirmed confirmed</p>
+                </div>
+                <a class="link" asp-controller="Appointments" asp-action="Index">Open list</a>
+            </div>
+            @if (queue.Next.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("No patients yet", "Arrivals and confirmed appointments will appear here.", "clock"))" />
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table table--compact">
+                        <thead>
+                            <tr><th scope="col">Time</th><th scope="col">Patient</th><th scope="col">Clinician</th><th scope="col">Status</th><th scope="col" class="actions">Action</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in queue.Next)
+                            {
+                                var status = Hospital.BLL.Common.StatusTone.Appointment(item.Status);
+                                <tr>
+                                    <td class="mono nowrap">@(item.SlotMinutes <= 0 ? "—" : $"{item.SlotMinutes / 60:00}:{item.SlotMinutes % 60:00}")</td>
+                                    <td class="strong">@item.PatientName<span class="table__sub">@item.Mrn</span></td>
+                                    <td>@item.DoctorName</td>
+                                    <td><partial name="_StatusBadge" model="status" /></td>
+                                    <td class="actions">
+                                        @if (item.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.Approved)
+                                        {
+                                            <form asp-controller="Appointments" asp-action="CheckIn" asp-route-id="@item.Id" method="post" class="inline">
+                                                <button class="btn btn--sm btn--primary" type="submit">Check in</button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn--sm" asp-controller="Encounters" asp-action="Index">Encounters</a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+
+    @if (triage is not null)
+    {
+        <section class="card card--flush" aria-labelledby="triage-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="triage-heading">Awaiting triage</h2>
+                    <p class="card__subtitle">Registered encounters without recorded vital signs</p>
+                </div>
+            </div>
+            @if (triage.Items.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(("Triage queue clear", "No registered encounters are waiting for assessment.", "check"))" />
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table table--compact">
+                        <thead><tr><th scope="col">Encounter</th><th scope="col">Patient</th><th scope="col">Registered</th><th scope="col" class="actions">Action</th></tr></thead>
+                        <tbody>
+                            @foreach (var item in triage.Items)
+                            {
+                                <tr>
+                                    <td class="mono">@item.Number</td>
+                                    <td class="strong">@item.PatientName<span class="table__sub">@item.Mrn</span></td>
+                                    <td class="nowrap">@item.RegisteredAtUtc.ToString("HH:mm")</td>
+                                    <td class="actions"><a class="btn btn--sm" asp-controller="Encounters" asp-action="Details" asp-route-id="@item.Id">Triage</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</div>

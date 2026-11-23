@@ -1,0 +1,143 @@
+@model Hospital.DAL.Entities.Diagnostics.ImagingOrder
+@{
+    bool canReport = ViewBag.CanReport;
+    bool canVerify = ViewBag.CanVerify;
+    bool canRelease = ViewBag.CanRelease;
+    bool canManage = ViewBag.CanManage;
+    var status = Model.Status;
+    var badge = Hospital.BLL.Common.StatusTone.Imaging(status);
+    var editable = status is Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Performed
+        or Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Reported;
+}
+
+@section PageActions {
+    <partial name="_StatusBadge" model="badge" />
+    <button class="btn btn--sm" type="button" data-print><partial name="_Icon" model="@("print")" /> Print report</button>
+    @if (canManage && status == Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Requested)
+    {
+        <form asp-action="Transition" asp-route-id="@Model.Id" method="post" style="display:flex;gap:4px">
+            <input type="hidden" name="action" value="schedule" />
+            <input class="input input--sm" type="datetime-local" name="scheduledFor" required aria-label="Schedule for" />
+            <button class="btn btn--sm" type="submit">Schedule</button>
+        </form>
+    }
+    @if (canManage && status is Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Scheduled or Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Requested)
+    {
+        <form asp-action="Transition" asp-route-id="@Model.Id" method="post">
+            <input type="hidden" name="action" value="perform" />
+            <button class="btn btn--sm" type="submit">Mark performed</button>
+        </form>
+    }
+    @if (canVerify && status == Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Reported)
+    {
+        <form asp-action="Transition" asp-route-id="@Model.Id" method="post" data-confirm="Verify this report as a radiologist?">
+            <input type="hidden" name="action" value="verify" />
+            <button class="btn btn--sm btn--primary" type="submit">Verify</button>
+        </form>
+    }
+    @if (canRelease && status == Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Verified)
+    {
+        <form asp-action="Transition" asp-route-id="@Model.Id" method="post" data-confirm="Release this report to the clinical record? Released reports are final.">
+            <input type="hidden" name="action" value="release" />
+            <button class="btn btn--sm btn--navy" type="submit">Release</button>
+        </form>
+    }
+}
+
+<div class="print-header">
+    <div class="print-header__brand">CareAxis · Imaging report @Model.Number</div>
+    <div class="print-header__meta">@Model.Modality · @Model.StudyName · @Model.Patient?.FirstName @Model.Patient?.LastName (@Model.Patient?.Mrn)</div>
+</div>
+
+<div class="split-grid">
+    <div class="stack">
+        <section class="card" aria-labelledby="report-heading">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title" id="report-heading">Radiologist report</h2>
+                    <p class="card__subtitle">
+                        @if (status == Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Released)
+                        {
+                            <text>Released report — final and immutable.</text>
+                        }
+                        else if (status == Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Verified)
+                        {
+                            <text>Verified by @Model.VerifiedByUserId on @Model.VerifiedAtUtc?.ToString("yyyy-MM-dd HH:mm") UTC. Not yet released.</text>
+                        }
+                        else
+                        {
+                            <text>Draft — not clinically final until verified and released.</text>
+                        }
+                    </p>
+                </div>
+            </div>
+            <div class="card__body">
+                @if (canReport && editable)
+                {
+                    <form asp-action="Transition" asp-route-id="@Model.Id" method="post" class="stack" style="gap:var(--space-3)">
+                        <input type="hidden" name="action" value="report" />
+                        <div class="field">
+                            <label class="field__label" for="findings">Findings</label>
+                            <textarea class="textarea" id="findings" name="findings" rows="8" required>@Model.Findings</textarea>
+                            <span class="field__hint">Written by the reporting radiologist. The system never generates findings.</span>
+                        </div>
+                        <div class="field">
+                            <label class="field__label" for="impression">Impression</label>
+                            <textarea class="textarea" id="impression" name="impression" rows="3" required>@Model.Impression</textarea>
+                        </div>
+                        <div><button class="btn btn--primary" type="submit">Save draft</button></div>
+                    </form>
+                }
+                else if (string.IsNullOrWhiteSpace(Model.Findings))
+                {
+                    <partial name="_EmptyState" model="@(("No report yet", status == Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Performed ? "A radiologist must write the findings and impression." : "The study must be performed before a report can be written.", "scan"))" />
+                }
+                else
+                {
+                    <div class="report-body">
+                        <h3>Findings</h3>
+                        <p style="white-space:pre-line">@Model.Findings</p>
+                        <h3>Impression</h3>
+                        <p style="white-space:pre-line">@Model.Impression</p>
+                        <p class="muted">Reported by @(Model.RadiologistUserId ?? "—")@(Model.VerifiedAtUtc is null ? "" : $" · verified {Model.VerifiedAtUtc:yyyy-MM-dd HH:mm} UTC")</p>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+
+    <div class="stack">
+        <section class="card">
+            <div class="card__header"><h2 class="card__title">Study</h2></div>
+            <div class="card__body">
+                <dl class="dl">
+                    <dt>Number</dt><dd class="mono">@Model.Number</dd>
+                    <dt>Patient</dt><dd>@Model.Patient?.FirstName @Model.Patient?.LastName · @Model.Patient?.Mrn</dd>
+                    <dt>Encounter</dt><dd><a asp-controller="Encounters" asp-action="Details" asp-route-id="@Model.EncounterId">@Model.Encounter?.Number</a></dd>
+                    <dt>Modality</dt><dd>@Model.Modality</dd>
+                    <dt>Study</dt><dd>@Model.StudyName</dd>
+                    <dt>Indication</dt><dd>@(Model.ClinicalIndication ?? "—")</dd>
+                    <dt>Requested</dt><dd>@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</dd>
+                    <dt>Scheduled</dt><dd>@(Model.ScheduledForUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</dd>
+                    <dt>Performed</dt><dd>@(Model.PerformedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card__header"><h2 class="card__title">Status history</h2></div>
+            <div class="card__body">
+                <ul class="timeline">
+                    @foreach (var step in new[] { Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Requested, Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Scheduled, Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Performed, Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Reported, Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Verified, Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Released })
+                    {
+                        var reached = status != Hospital.DAL.Entities.Diagnostics.ImagingOrderStatus.Cancelled && (int)step <= (int)status;
+                        <li class="timeline__item">
+                            <span class="timeline__dot" style="border-color:@(reached ? "var(--teal-500)" : "var(--line-300)")" aria-hidden="true"></span>
+                            <span class="timeline__body"><span class="timeline__title" style="@(reached ? "" : "color:var(--ink-400)")">@step</span></span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </section>
+    </div>
+</div>

@@ -1,0 +1,162 @@
+@{
+    var summary = (Hospital.BLL.Services.Abstraction.OccupancySummary)ViewBag.Summary;
+    var board = (IReadOnlyList<Hospital.BLL.Services.Abstraction.BedBoardRow>)ViewBag.Board;
+    var list = (Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.AdmissionListItem>)ViewBag.Admissions;
+    string? status = ViewBag.Status;
+    string? term = ViewBag.Term;
+    bool canManage = ViewBag.CanManage;
+    bool canDischarge = ViewBag.CanDischarge;
+    bool canBed = ViewBag.CanBed;
+    var statuses = Enum.GetNames<Hospital.DAL.Entities.Operations.AdmissionStatus>();
+}
+
+@section PageActions {
+    @if (canManage)
+    {
+        <a class="btn btn--primary" asp-action="Request"><partial name="_Icon" model="@("plus")" /> Request admission</a>
+    }
+}
+
+<div class="kpi-grid" style="margin-bottom:var(--space-5)">
+    <article class="kpi"><div class="kpi__label">Occupancy</div><div class="kpi__value">@summary.OccupancyPercent%</div><div class="kpi__hint">@summary.Occupied of @summary.TotalBeds beds</div></article>
+    <article class="kpi kpi--neutral"><div class="kpi__label">Available beds</div><div class="kpi__value">@(summary.TotalBeds - summary.Occupied)</div><div class="kpi__hint">Ready for admission</div></article>
+    <article class="kpi kpi--attention"><div class="kpi__label">Awaiting bed</div><div class="kpi__value">@summary.PendingAdmissions</div><div class="kpi__hint">Admission requests</div></article>
+    <article class="kpi kpi--info"><div class="kpi__label">Discharges today</div><div class="kpi__value">@summary.DischargesToday</div><div class="kpi__hint">Released beds</div></article>
+</div>
+
+<section class="card card--flush" aria-labelledby="board-heading">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title" id="board-heading">Bed board</h2>
+            <p class="card__subtitle">Live occupancy. A bed can never hold two active patients; this is enforced by the database.</p>
+        </div>
+    </div>
+    <div class="card__body">
+        @if (board.Count == 0)
+        {
+            <partial name="_EmptyState" model="@(("No beds configured", "Configure wards, rooms and beds before admitting patients.", "bed"))" />
+        }
+        else
+        {
+            <div class="form-grid">
+                @foreach (var bed in board)
+                {
+                    <div class="care-tile" style="align-items:flex-start">
+                        <span class="care-tile__icon" style="background:@(bed.IsOccupied ? "var(--warning-050)" : "var(--success-050)");color:@(bed.IsOccupied ? "var(--warning-700)" : "var(--success-700)")">
+                            <partial name="_Icon" model="@("bed")" />
+                        </span>
+                        <span style="min-width:0">
+                            <span class="care-tile__title">@bed.Ward · @bed.Room · @bed.Bed</span>
+                            <span class="care-tile__meta">
+                                @if (bed.IsOccupied)
+                                {
+                                    <text>@bed.PatientName (@bed.Mrn) since @bed.SinceUtc?.ToString("MMM dd")</text>
+                                }
+                                else
+                                {
+                                    <text>Available</text>
+                                }
+                            </span>
+                        </span>
+                        <span class="badge badge--@(bed.IsOccupied ? "warning" : "success")" style="margin-left:auto">@(bed.IsOccupied ? "Occupied" : "Free")</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<div class="filter-bar" style="margin-top:var(--space-5)">
+    <form method="get" asp-action="Index" style="display:flex;gap:var(--space-3);align-items:flex-end;flex-wrap:wrap;flex:1">
+        <div class="field field--grow">
+            <label class="field__label" for="term">Search</label>
+            <input class="input input--sm" id="term" name="term" value="@term" type="search" placeholder="Admission number, patient or MRN" />
+        </div>
+        <div class="field">
+            <label class="field__label" for="status">Status</label>
+            <select class="select select--sm" id="status" name="status">
+                <option value="">All states</option>
+                @foreach (var option in statuses)
+                {
+                    <option value="@option" selected="@(status == option)">@option</option>
+                }
+            </select>
+        </div>
+        <button class="btn btn--primary btn--sm" type="submit">Apply</button>
+        <a class="btn btn--quiet btn--sm" asp-action="Index">Reset</a>
+    </form>
+</div>
+
+<div class="card card--flush">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Admissions</h2>
+            <p class="card__subtitle">@list.TotalCount record@(list.TotalCount == 1 ? "" : "s")</p>
+        </div>
+    </div>
+    @if (list.Items.Count == 0)
+    {
+        <partial name="_EmptyState" model="@(("No admissions", "Requests appear here for bed assignment.", "bed"))" />
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Admission</th>
+                        <th scope="col">Patient</th>
+                        <th scope="col">Bed</th>
+                        <th scope="col">Requested</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in list.Items)
+                    {
+                        var badge = Hospital.BLL.Common.StatusTone.Admission(item.Status);
+                        var freeBeds = board.Where(b => !b.IsOccupied).ToList();
+                        <tr>
+                            <td class="mono">@item.Number</td>
+                            <td class="strong">@item.PatientName<span class="table__sub">@item.Mrn</span></td>
+                            <td>@(item.WardRoomBed ?? "—")</td>
+                            <td class="nowrap muted">@item.RequestedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><partial name="_StatusBadge" model="badge" /></td>
+                            <td class="actions">
+                                @if (canBed && freeBeds.Count > 0 && item.Status is Hospital.DAL.Entities.Operations.AdmissionStatus.Requested or Hospital.DAL.Entities.Operations.AdmissionStatus.Admitted)
+                                {
+                                    <form asp-action="Assign" asp-route-id="@item.Id" method="post" style="display:flex;gap:4px;justify-content:flex-end">
+                                        <select class="select select--sm" name="bedId" style="max-width:170px" aria-label="Bed for @item.PatientName">
+                                            @foreach (var bed in freeBeds)
+                                            {
+                                                <option value="@bed.BedId">@bed.Ward / @bed.Room / @bed.Bed</option>
+                                            }
+                                        </select>
+                                        <button class="btn btn--sm" type="submit">@(item.Status == Hospital.DAL.Entities.Operations.AdmissionStatus.Admitted ? "Transfer" : "Admit")</button>
+                                    </form>
+                                }
+                                @if (canDischarge && item.Status == Hospital.DAL.Entities.Operations.AdmissionStatus.Admitted)
+                                {
+                                    <details style="margin-top:4px">
+                                        <summary class="btn btn--sm btn--quiet" style="list-style:none;display:inline-flex">Discharge</summary>
+                                        <form asp-action="Discharge" asp-route-id="@item.Id" method="post" style="display:grid;gap:4px;margin-top:4px;min-width:240px">
+                                            <textarea class="textarea" name="summary" rows="2" required placeholder="Discharge summary (required)"></textarea>
+                                            <button class="btn btn--sm btn--danger" type="submit">Confirm discharge</button>
+                                        </form>
+                                    </details>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <span>Showing @(((list.Page - 1) * list.PageSize) + 1)–@(Math.Min(list.Page * list.PageSize, list.TotalCount)) of @list.TotalCount</span>
+            <partial name="_Pager" model="@HospitalManagement.Models.PagerModel.From(
+                new Dictionary<string, string?> { ["term"] = term, ["status"] = status, ["pageSize"] = list.PageSize.ToString() },
+                list.Page, list.TotalPages, list.TotalCount, list.PageSize)" />
+        </div>
+    }
+</div>

@@ -9,9 +9,6 @@
     @*    *@
     }}
 
-@section Header {
-    <partial name="_MainNavigation" />
-}
 
 <div class="container mt-4">
 
@@ -51,13 +48,5 @@
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
-
     }
-    @*  <script>
-
-        setTimeout(function () {
-            document.getElementById("Success").innerHTML = "";
-        }, 5000);
-
-    </script> *@
 }

@@ -1,0 +1,128 @@
+@model Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.AppointmentListItem>
+@{
+    string? date = ViewBag.Date;
+    string? status = ViewBag.Status;
+    string? doctorId = ViewBag.DoctorId;
+    string? term = ViewBag.Term;
+    var directory = (Hospital.BLL.Services.Abstraction.OrganizationSnapshot)ViewBag.Directory;
+    var queue = (Hospital.BLL.Services.Abstraction.DepartmentQueue)ViewBag.Queue;
+    bool canManage = User.HasClaim(AppClaimTypes.Permission, Hospital.BLL.Permissions.Permission.AppointmentManage);
+    bool canCheckIn = User.HasClaim(AppClaimTypes.Permission, Hospital.BLL.Permissions.Permission.AppointmentCheckIn);
+    var statuses = Enum.GetNames<Hospital.DAL.Entities.OwnedTypes.AppointStatus>();
+}
+
+@section PageActions {
+    <a class="btn" asp-action="Index" asp-route-date="@DateTime.UtcNow.ToString("yyyy-MM-dd")">Today</a>
+    <a class="btn btn--primary" asp-action="Book"><partial name="_Icon" model="@("plus")" /> Book appointment</a>
+}
+
+<div class="kpi-grid" style="margin-bottom:var(--space-5)">
+    <article class="kpi kpi--teal"><div class="kpi__label">Checked in</div><div class="kpi__value">@queue.CheckedIn</div><div class="kpi__hint">In the clinic now</div></article>
+    <article class="kpi kpi--info"><div class="kpi__label">Confirmed</div><div class="kpi__value">@queue.Waiting</div><div class="kpi__hint">Scheduled and not yet arrived</div></article>
+    <article class="kpi kpi--attention"><div class="kpi__label">Awaiting confirmation</div><div class="kpi__value">@queue.Confirmed</div><div class="kpi__hint">New requests</div></article>
+    <article class="kpi kpi--neutral"><div class="kpi__label">Completed</div><div class="kpi__value">@queue.Completed</div><div class="kpi__hint">Seen today</div></article>
+</div>
+
+<div class="filter-bar">
+    <form method="get" asp-action="Index" style="display:flex;gap:var(--space-3);align-items:flex-end;flex-wrap:wrap;flex:1">
+        <div class="field" style="max-width:170px">
+            <label class="field__label" for="date">Date</label>
+            <input class="input input--sm" id="date" name="date" type="date" value="@date" />
+        </div>
+        <div class="field">
+            <label class="field__label" for="status">Status</label>
+            <select class="select select--sm" id="status" name="status">
+                <option value="">All states</option>
+                @foreach (var option in statuses)
+                {
+                    <option value="@option" selected="@(status == option)">@System.Text.RegularExpressions.Regex.Replace(option, "(\\B[A-Z])", " $1")</option>
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label class="field__label" for="doctor">Clinician</label>
+            <select class="select select--sm" id="doctor" name="doctorId">
+                <option value="">All clinicians</option>
+                @foreach (var doctor in directory.Doctors)
+                {
+                    <option value="@doctor.Id" selected="@(doctorId == doctor.Id)">@doctor.Label</option>
+                }
+            </select>
+        </div>
+        <div class="field field--grow">
+            <label class="field__label" for="term">Search</label>
+            <input class="input input--sm" id="term" name="term" value="@term" type="search" placeholder="Patient, MRN or reference" />
+        </div>
+        <button class="btn btn--primary btn--sm" type="submit">Apply</button>
+        <a class="btn btn--quiet btn--sm" asp-action="Index">Reset</a>
+    </form>
+</div>
+
+<div class="card card--flush">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Appointments</h2>
+            <p class="card__subtitle">@Model.TotalCount scheduled record@(Model.TotalCount == 1 ? "" : "s")</p>
+        </div>
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <partial name="_EmptyState" model="@(("No appointments", "Book an appointment or relax the filters.", "calendar"))" />
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Slot</th>
+                        <th scope="col">Patient</th>
+                        <th scope="col">Clinician</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        var badge = Hospital.BLL.Common.StatusTone.Appointment(item.Status);
+                        <tr>
+                            <td class="mono nowrap">@(item.SlotMinutes <= 0 ? "—" : $"{item.SlotMinutes / 60:00}:{item.SlotMinutes % 60:00}")</td>
+                            <td class="strong">@item.PatientName<span class="table__sub">@item.Mrn</span></td>
+                            <td>@item.DoctorName</td>
+                            <td class="nowrap">@item.Date.ToString("yyyy-MM-dd")</td>
+                            <td><partial name="_StatusBadge" model="badge" /></td>
+                            <td class="actions">
+                                @if (canManage && item.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.Pending)
+                                {
+                                    <form asp-action="Confirm" asp-route-id="@item.Id" asp-route-date="@date" method="post" style="display:inline">
+                                        <button class="btn btn--sm btn--primary" type="submit">Confirm</button>
+                                    </form>
+                                }
+                                @if (canCheckIn && item.Status == Hospital.DAL.Entities.OwnedTypes.AppointStatus.Approved)
+                                {
+                                    <form asp-action="CheckIn" asp-route-id="@item.Id" asp-route-date="@date" method="post" style="display:inline">
+                                        <button class="btn btn--sm" type="submit">Check in</button>
+                                    </form>
+                                }
+                                @if (canManage && item.Status is Hospital.DAL.Entities.OwnedTypes.AppointStatus.Pending or Hospital.DAL.Entities.OwnedTypes.AppointStatus.Approved)
+                                {
+                                    <form asp-action="Cancel" asp-route-id="@item.Id" asp-route-date="@date" method="post" style="display:inline" data-confirm="Cancel this appointment and release the slot?">
+                                        <button class="btn btn--sm btn--quiet" type="submit">Cancel</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <span>Showing @(((Model.Page - 1) * Model.PageSize) + 1)–@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) of @Model.TotalCount</span>
+            <partial name="_Pager" model="@HospitalManagement.Models.PagerModel.From(
+                new Dictionary<string, string?> { ["date"] = date, ["status"] = status, ["doctorId"] = doctorId, ["term"] = term, ["pageSize"] = Model.PageSize.ToString() },
+                Model.Page, Model.TotalPages, Model.TotalCount, Model.PageSize)" />
+        </div>
+    }
+</div>

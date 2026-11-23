@@ -1,26 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
 
 namespace Hospital.DAL.DataBase;
 
 /// <summary>
 /// Keeps EF tooling independent of application startup side effects such as role seeding
-/// and background-job registration. Supply ConnectionStrings__DefaultConnection locally.
+/// and background-job registration. Supply ConnectionStrings__DefaultConnection locally;
+/// when it is absent a localdb placeholder is used because migration scaffolding only
+/// requires the provider, not a reachable server.
 /// </summary>
-public sealed class HospitalDbContextFactory : IDesignTimeDbContextFactory<HospitalDbContext>
+public sealed class HospitalDbContextFactory : DesignTimeDbContextFactoryBase<HospitalDbContext>
 {
-    public HospitalDbContext CreateDbContext(string[] args)
-    {
-        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException(
-                "Set ConnectionStrings__DefaultConnection to a local development database before running EF tooling.");
-        }
-
-        var options = new DbContextOptionsBuilder<HospitalDbContext>()
-            .UseSqlServer(connectionString)
-            .Options;
-        return new HospitalDbContext(options);
-    }
+    protected override HospitalDbContext Create(DbContextOptions<HospitalDbContext> options) => new(options);
 }

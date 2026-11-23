@@ -1,0 +1,140 @@
+@model Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.InvoiceListItem>
+@{
+    var kpis = (IReadOnlyList<Hospital.BLL.Services.Abstraction.Kpi>)ViewBag.Kpis;
+    string? status = ViewBag.Status;
+    string? term = ViewBag.Term;
+    string? from = ViewBag.From;
+    string? to = ViewBag.To;
+    var pendingRefunds = (IReadOnlyList<Hospital.DAL.Entities.Billing.Payment>)ViewBag.PendingRefunds;
+    bool canManage = ViewBag.CanManage;
+    bool canApprove = ViewBag.CanApproveRefund;
+    var statuses = Enum.GetNames<Hospital.DAL.Entities.Billing.InvoiceStatus>();
+}
+
+@section PageActions {
+    @if (canManage)
+    {
+        <a class="btn btn--primary" asp-action="Create"><partial name="_Icon" model="@("plus")" /> New invoice</a>
+    }
+}
+
+<partial name="_KpiGrid" model="kpis" />
+
+@if (canApprove && pendingRefunds.Count > 0)
+{
+    <section class="card card--flush" style="margin-top:var(--space-5)" aria-labelledby="refund-heading">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title" id="refund-heading">Refunds awaiting a second approval</h2>
+                <p class="card__subtitle">Recorded by another officer; approval cannot be given by the officer who recorded it.</p>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="table table--compact">
+                <thead><tr><th scope="col">Receipt</th><th scope="col">Invoice</th><th scope="col">Patient</th><th scope="col" class="num">Amount</th><th scope="col">Recorded</th><th scope="col" class="actions"></th></tr></thead>
+                <tbody>
+                    @foreach (var refund in pendingRefunds)
+                    {
+                        <tr>
+                            <td class="mono">@refund.ReceiptNumber</td>
+                            <td class="mono">@refund.Invoice?.Number</td>
+                            <td>@refund.Invoice?.Patient?.FirstName @refund.Invoice?.Patient?.LastName</td>
+                            <td class="num strong">@Hospital.BLL.Common.Money.Format(refund.Amount)</td>
+                            <td class="nowrap muted">@refund.PaidAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="actions">
+                                <form asp-action="ApproveRefund" asp-route-paymentId="@refund.Id" method="post" data-confirm="Approve this refund?">
+                                    <button class="btn btn--sm btn--primary" type="submit">Approve</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+<div class="filter-bar" style="margin-top:var(--space-5)">
+    <form method="get" asp-action="Index" style="display:flex;gap:var(--space-3);align-items:flex-end;flex-wrap:wrap;flex:1">
+        <div class="field" style="max-width:160px">
+            <label class="field__label" for="from">From</label>
+            <input class="input input--sm" id="from" name="from" type="date" value="@from" />
+        </div>
+        <div class="field" style="max-width:160px">
+            <label class="field__label" for="to">To</label>
+            <input class="input input--sm" id="to" name="to" type="date" value="@to" />
+        </div>
+        <div class="field">
+            <label class="field__label" for="status">Status</label>
+            <select class="select select--sm" id="status" name="status">
+                <option value="">All states</option>
+                @foreach (var option in statuses)
+                {
+                    <option value="@option" selected="@(status == option)">@option</option>
+                }
+            </select>
+        </div>
+        <div class="field field--grow">
+            <label class="field__label" for="term">Search</label>
+            <input class="input input--sm" id="term" name="term" value="@term" type="search" placeholder="Invoice, patient or MRN" />
+        </div>
+        <button class="btn btn--primary btn--sm" type="submit">Apply</button>
+        <a class="btn btn--quiet btn--sm" asp-action="Index">Reset</a>
+    </form>
+</div>
+
+<div class="card card--flush">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Invoices</h2>
+            <p class="card__subtitle">@Model.TotalCount invoice@(Model.TotalCount == 1 ? "" : "s")</p>
+        </div>
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <partial name="_EmptyState" model="@(("No invoices", "Create an invoice to begin billing a patient.", "invoice"))" />
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Invoice</th>
+                        <th scope="col">Patient</th>
+                        <th scope="col">Issued</th>
+                        <th scope="col" class="num">Total</th>
+                        <th scope="col" class="num">Insurance</th>
+                        <th scope="col" class="num">Paid</th>
+                        <th scope="col" class="num">Balance</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var invoice in Model.Items)
+                    {
+                        var badge = Hospital.BLL.Common.StatusTone.Invoice(invoice.Status);
+                        <tr>
+                            <td class="mono">@invoice.Number</td>
+                            <td class="strong">@invoice.PatientName<span class="table__sub">@invoice.Mrn</span></td>
+                            <td class="nowrap muted">@invoice.IssuedAtUtc.ToString("yyyy-MM-dd")</td>
+                            <td class="num">@Hospital.BLL.Common.Money.Format(invoice.Total)</td>
+                            <td class="num muted">@Hospital.BLL.Common.Money.Format(invoice.InsuranceCovered)</td>
+                            <td class="num">@Hospital.BLL.Common.Money.Format(invoice.Paid)</td>
+                            <td class="num strong">@Hospital.BLL.Common.Money.Format(invoice.Balance)</td>
+                            <td><partial name="_StatusBadge" model="badge" /></td>
+                            <td class="actions"><a class="btn btn--sm" asp-action="Details" asp-route-id="@invoice.Id">Open</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <span>Showing @(((Model.Page - 1) * Model.PageSize) + 1)–@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) of @Model.TotalCount</span>
+            <partial name="_Pager" model="@HospitalManagement.Models.PagerModel.From(
+                new Dictionary<string, string?> { ["term"] = term, ["status"] = status, ["from"] = from, ["to"] = to, ["pageSize"] = Model.PageSize.ToString() },
+                Model.Page, Model.TotalPages, Model.TotalCount, Model.PageSize)" />
+        </div>
+    }
+</div>

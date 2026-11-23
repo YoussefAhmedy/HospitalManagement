@@ -1,19 +1,24 @@
+using System.Globalization;
+using System.Security.Claims;
 using System.Net;
 using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hospital.BLL.Helpers;
 using Hospital.BLL.Mappers;
+using Hospital.BLL.Permissions;
 using Hospital.BLL.Services.Abstraction;
 using Hospital.BLL.Services.Implementation;
+using Hospital.BLL.Services.Seeding;
 using Hospital.DAL.DataBase;
 using Hospital.DAL.Entities;
+using HospitalManagement.Infrastructure;
 using Hospital.DAL.Repository.Abstraction;
 using Hospital.DAL.Repository.Implementation;
-using HospitalManagement.Infrastructure;
 using HospitalManagement.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -21,6 +26,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace HospitalManagement;
@@ -136,6 +142,17 @@ public class Program
             .AddEntityFrameworkStores<HospitalDbContext>()
             .AddDefaultTokenProviders();
 
+        builder.Services.AddAuthorization(options =>
+        {
+            foreach (var permission in Permission.All)
+            {
+                options.AddPolicy(Permission.Policy(permission),
+                    policy => policy.RequireClaim(AppClaimTypes.Permission, permission));
+            }
+
+            options.AddPolicy("ClinicalStaff", policy => policy.RequireClaim(AppClaimTypes.Clinical, "true"));
+        });
+
         builder.Services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = "CareAxis.Session";
@@ -199,6 +216,29 @@ public class Program
             };
         });
 
+        // Interface localisation: English (default) and Arabic with right-to-left layout.
+        // Dates and numbers use a fixed invariant-ish culture so clinical values never shift
+        // between locales; only interface text and text direction change.
+        builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+        builder.Services.Configure<RequestLocalizationOptions>(options =>
+        {
+            var supported = new[]
+            {
+                new CultureInfo("en"),
+                new CultureInfo("ar")
+            };
+
+            options.DefaultRequestCulture = new RequestCulture("en");
+            options.SupportedCultures = supported;
+            options.SupportedUICultures = supported;
+            options.RequestCultureProviders =
+            [
+                new CookieRequestCultureProvider(),
+                new AcceptLanguageHeaderRequestCultureProvider()
+            ];
+        });
+
+        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddAutoMapper(configuration => configuration.AddProfile<DomainProfile>());
         builder.Services.AddScoped<IEmailSender, EmailSender>();
         builder.Services.AddScoped<IProfileImageStorage, LocalProfileImageStorage>();
@@ -219,17 +259,42 @@ public class Program
         builder.Services.AddScoped<ImedicalRecordService, MedicalRecordService>();
         builder.Services.AddScoped<IScheduleRepo, ScheduleRepo>();
         builder.Services.AddScoped<IScheduleService, ScheduleService>();
+        builder.Services.AddScoped<INumberSequenceService, NumberSequenceService>();
+        builder.Services.AddScoped<IPatientLookupService, PatientLookupService>();
+        builder.Services.AddScoped<IEncounterService, EncounterService>();
+        builder.Services.AddScoped<ILabService, LabService>();
+        builder.Services.AddScoped<IPharmacyService, PharmacyService>();
+        builder.Services.AddScoped<IAdmissionService, AdmissionService>();
+        builder.Services.AddScoped<IBillingService, BillingService>();
+        builder.Services.AddScoped<IReportService, ReportService>();
+        builder.Services.AddScoped<IAppointmentSchedulingService, AppointmentSchedulingService>();
+        builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
+        builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
+        builder.Services.AddScoped<IOrganizationDirectoryService, OrganizationDirectoryService>();
+        builder.Services.AddScoped<IImagingService, ImagingService>();
+        builder.Services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, PermissionClaimsTransformation>();
 
         await using var app = builder.Build();
         app.UseForwardedHeaders();
         await SeedRolesAsync(app.Services);
         if (bootstrapAdmin)
         {
+            using (var bootstrapScope = app.Services.CreateScope())
+            {
+                await DatabaseSchemaInitializer.InitialiseAsync(
+                    bootstrapScope.ServiceProvider.GetRequiredService<HospitalDbContext>(),
+                    app.Environment,
+                    builder.Configuration,
+                    app.Logger);
+            }
+
             await BootstrapAdminAsync(app.Services, builder.Configuration);
             return;
         }
 
-        if (!app.Environment.IsDevelopment())
+        await DevelopmentSeederRunner.RunAsync(app.Services, builder.Configuration, app.Environment, app.Logger);
+
+        if (!app.Environment.IsDevelopment() && app.Environment.EnvironmentName != "Performance")
         {
             app.UseExceptionHandler("/Home/Error");
             app.UseHsts();
@@ -244,14 +309,32 @@ public class Program
                 headers["X-Frame-Options"] = "DENY";
                 headers["Referrer-Policy"] = "no-referrer";
                 headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+                // No inline script is emitted anywhere in the application: every handler
+                // lives in wwwroot/js. Scripts are therefore restricted to same-origin
+                // files, which removes the main XSS payload surface. Inline *styles* remain
+                // permitted only for the small set of layout offsets produced by Razor,
+                // and will be removed when those are moved into the stylesheet.
                 headers["Content-Security-Policy"] =
                     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
                     "form-action 'self'; img-src 'self' data: blob:; font-src 'self' data:; " +
-                    "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';";
+                    "style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self';";
 
+                // Medical and financial pages must never be cached by a shared proxy or
+                // survive the back button after sign-out.
                 if (context.Request.Path.StartsWithSegments("/Patient") ||
+                    context.Request.Path.StartsWithSegments("/Patients") ||
                     context.Request.Path.StartsWithSegments("/Doctor") ||
                     context.Request.Path.StartsWithSegments("/Admin") ||
+                    context.Request.Path.StartsWithSegments("/Encounters") ||
+                    context.Request.Path.StartsWithSegments("/Appointments") ||
+                    context.Request.Path.StartsWithSegments("/Laboratory") ||
+                    context.Request.Path.StartsWithSegments("/Radiology") ||
+                    context.Request.Path.StartsWithSegments("/Pharmacy") ||
+                    context.Request.Path.StartsWithSegments("/Admissions") ||
+                    context.Request.Path.StartsWithSegments("/Billing") ||
+                    context.Request.Path.StartsWithSegments("/Reports") ||
+                    context.Request.Path.StartsWithSegments("/Audit") ||
+                    context.Request.Path.StartsWithSegments("/Dashboard") ||
                     context.Request.Path.StartsWithSegments("/Account/Profile"))
                 {
                     headers.CacheControl = "no-store, private";
@@ -266,6 +349,7 @@ public class Program
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseRequestLocalization();
         app.UseRouting();
         app.UseRateLimiter();
         app.UseAuthentication();
@@ -365,6 +449,46 @@ public class Program
             if (!result.Succeeded)
             {
                 throw new InvalidOperationException($"Required role '{role}' could not be initialized.");
+            }
+        }
+
+        await SeedRolePermissionsAsync(services);
+    }
+
+    /// <summary>
+    /// Keeps role claims aligned with the compiled permission map, adding missing grants and
+    /// removing revoked ones so the database always reflects <see cref="RolePermissions"/>.
+    /// </summary>
+    private static async Task SeedRolePermissionsAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        foreach (var role in Enum.GetNames<Role>())
+        {
+            var identityRole = await roleManager.FindByNameAsync(role);
+            if (identityRole is null)
+            {
+                continue;
+            }
+
+            var existing = await roleManager.GetClaimsAsync(identityRole);
+            var permissionClaims = existing.Where(c => c.Type == AppClaimTypes.Permission).ToList();
+            var desired = RolePermissions.ForName(role).ToHashSet();
+
+            foreach (var claim in permissionClaims.Where(c => !desired.Contains(c.Value)))
+            {
+                await roleManager.RemoveClaimAsync(identityRole, claim);
+            }
+
+            foreach (var permission in desired.Where(p => permissionClaims.All(c => c.Value != p)))
+            {
+                await roleManager.AddClaimAsync(identityRole, new Claim(AppClaimTypes.Permission, permission));
+            }
+
+            var isClinician = existing.Any(c => c.Type == AppClaimTypes.Clinical);
+            if (RolePermissions.IsClinician(Enum.Parse<Role>(role)) && !isClinician)
+            {
+                await roleManager.AddClaimAsync(identityRole, new Claim(AppClaimTypes.Clinical, "true"));
             }
         }
     }

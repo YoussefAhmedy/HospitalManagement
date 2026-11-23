@@ -1,3 +1,5 @@
 @{
-    Layout = "_MainLayout";
+    // Account screens are presented without the application chrome; the layout itself
+    // selects the public frame so a signed-out visitor never sees navigation they cannot use.
+    Layout = "_AppShell";
 }

@@ -1,0 +1,113 @@
+@model Hospital.BLL.Common.PagedResult<Hospital.DAL.Entities.AuditLog>
+@{
+    string? term = ViewBag.Term;
+    string? eventType = ViewBag.EventType;
+    string? resourceType = ViewBag.ResourceType;
+    string? from = ViewBag.From;
+    string? to = ViewBag.To;
+    int page = ViewBag.Page;
+    int pageSize = ViewBag.PageSize;
+    var eventTypes = (List<string>)ViewBag.EventTypes;
+    var resourceTypes = (List<string>)ViewBag.ResourceTypes;
+    // User identifiers are shown as names where the directory knows them, and as a short
+    // opaque reference otherwise, so the trail stays readable without exposing raw GUIDs.
+    var people = new Dictionary<string, string>();
+    var directory = (Hospital.BLL.Services.Abstraction.OrganizationSnapshot)ViewBag.Directory;
+    foreach (var staff in directory.Staff)
+    {
+        people[staff.Id] = staff.Label;
+    }
+}
+
+<div class="filter-bar">
+    <form method="get" asp-action="Index" style="display:flex;gap:var(--space-3);align-items:flex-end;flex-wrap:wrap;flex:1">
+        <div class="field" style="max-width:150px">
+            <label class="field__label" for="from">From</label>
+            <input class="input input--sm" id="from" name="from" type="date" value="@from" />
+        </div>
+        <div class="field" style="max-width:150px">
+            <label class="field__label" for="to">To</label>
+            <input class="input input--sm" id="to" name="to" type="date" value="@to" />
+        </div>
+        <div class="field">
+            <label class="field__label" for="eventType">Event</label>
+            <select class="select select--sm" id="eventType" name="eventType">
+                <option value="">All events</option>
+                @foreach (var option in eventTypes)
+                {
+                    <option value="@option" selected="@(eventType == option)">@option</option>
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label class="field__label" for="resourceType">Resource</label>
+            <select class="select select--sm" id="resourceType" name="resourceType">
+                <option value="">All resources</option>
+                @foreach (var option in resourceTypes)
+                {
+                    <option value="@option" selected="@(resourceType == option)">@option</option>
+                }
+            </select>
+        </div>
+        <div class="field field--grow">
+            <label class="field__label" for="term">Search</label>
+            <input class="input input--sm" id="term" name="term" value="@term" type="search" placeholder="Event, resource id or user" />
+        </div>
+        <button class="btn btn--primary btn--sm" type="submit">Apply</button>
+        <a class="btn btn--quiet btn--sm" asp-action="Index">Reset</a>
+    </form>
+</div>
+
+<div class="notice notice--info" style="margin-bottom:var(--space-4)">
+    <partial name="_Icon" model="@("shield")" />
+    <div>The audit trail records who did what, when, to which record. Entries cannot be edited or deleted from the application; retention is governed by hospital policy.</div>
+</div>
+
+<div class="card card--flush">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Audit events</h2>
+            <p class="card__subtitle">@Model.TotalCount event@(Model.TotalCount == 1 ? "" : "s") · newest first</p>
+        </div>
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <partial name="_EmptyState" model="@(("No matching events", "Widen the date range or clear the filters.", "shield"))" />
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table table--compact">
+                <thead>
+                    <tr>
+                        <th scope="col">When (UTC)</th>
+                        <th scope="col">Event</th>
+                        <th scope="col">Actor</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Resource</th>
+                        <th scope="col">Reference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in Model.Items)
+                    {
+                        <tr>
+                            <td class="nowrap mono">@entry.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td class="strong mono">@entry.EventType</td>
+                            <td>@(entry.ActorUserId is not null && people.TryGetValue(entry.ActorUserId, out var actor) ? actor : entry.ActorUserId ?? "system")</td>
+                            <td>@(entry.SubjectUserId is not null && people.TryGetValue(entry.SubjectUserId, out var subject) ? subject : entry.SubjectUserId ?? "—")</td>
+                            <td>@(entry.ResourceType ?? "—")</td>
+                            <td class="mono muted">@(entry.ResourceId ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <span>Showing @(((page - 1) * pageSize) + 1)–@(Math.Min(page * pageSize, Model.TotalCount)) of @Model.TotalCount</span>
+            <partial name="_Pager" model="@HospitalManagement.Models.PagerModel.From(
+                new Dictionary<string, string?> { ["term"] = term, ["eventType"] = eventType, ["resourceType"] = resourceType, ["from"] = from, ["to"] = to, ["pageSize"] = pageSize.ToString() },
+                page, Model.TotalPages, Model.TotalCount, pageSize)" />
+        </div>
+    }
+</div>

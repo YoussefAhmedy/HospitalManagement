@@ -1,0 +1,354 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@using System.Security.Claims
+@using Hospital.BLL.Helpers
+@using Hospital.BLL.Permissions
+@{
+    var bodyClass = ViewData["BodyClass"] as string;
+    var title = ViewData["Title"] as string ?? "Workspace";
+    var eyebrow = ViewData["Eyebrow"] as string;
+    var subtitle = ViewData["Subtitle"] as string;
+    var sectionName = ViewData["Section"] as string;
+    var userName = User.FindFirst(ClaimTypes.GivenName)?.Value
+        ?? User.Identity?.Name?.Split('@')[0]
+        ?? "Account";
+    var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).Distinct().ToList();
+    var primaryRole = roles.FirstOrDefault() ?? "User";
+    var roleLabel = primaryRole switch
+    {
+        nameof(Role.SuperAdmin) => "Super administrator",
+        nameof(Role.HospitalAdmin) => "Hospital administrator",
+        nameof(Role.Admin) => "Administrator",
+        nameof(Role.Doctor) => "Clinician",
+        nameof(Role.Patient) => "Patient",
+        nameof(Role.Nurse) => "Nurse",
+        nameof(Role.Receptionist) => "Reception",
+        nameof(Role.LabTechnician) => "Laboratory",
+        nameof(Role.Radiologist) => "Radiology",
+        nameof(Role.Pharmacist) => "Pharmacy",
+        nameof(Role.BillingOfficer) => "Billing",
+        nameof(Role.MedicalRecordsOfficer) => "Medical records",
+        nameof(Role.Management) => "Management",
+        nameof(Role.Auditor) => "Auditor",
+        _ => primaryRole
+    };
+    var initials = string.Concat(userName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Home";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    bool Has(string permission) => isAuthenticated && User.HasClaim(AppClaimTypes.Permission, permission);
+    bool Active(string controller, string? action = null) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+        && (action is null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase));
+}
+@{
+    var uiCulture = System.Globalization.CultureInfo.CurrentUICulture;
+    var languageCode = uiCulture.TwoLetterISOLanguageName == "ar" ? "ar" : "en";
+    var isRtl = languageCode == "ar";
+    var alternateCulture = isRtl ? "en" : "ar";
+    var alternateLabel = isRtl ? "English" : "العربية";
+    string T(string key) => Hospital.BLL.Common.UiText.For(key, uiCulture.Name);
+    var returnPath = $"{Context.Request.Path}{Context.Request.QueryString}";
+}
+<!doctype html>
+<html lang="@languageCode" dir="@(isRtl ? "rtl" : "ltr")">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="@(ViewData["Description"] ?? "CareAxis hospital information system workspace.")" />
+    <title>@title · CareAxis</title>
+    <link rel="icon" href="~/favicon.ico" />
+    <link rel="stylesheet" href="~/css/design-system.css" asp-append-version="true" />
+    @await RenderSectionAsync("Style", required: false)
+</head>
+<body class="@bodyClass" data-app-shell data-direction="@(isRtl ? "rtl" : "ltr")">
+    <a class="skip-link" href="#main-content">@T("shell.skip")</a>
+
+    @if (!isAuthenticated)
+    {
+        <div class="public-shell">
+            <header class="public-nav">
+                <a class="public-nav__brand" asp-controller="Home" asp-action="Index">
+                    <span class="sidebar__mark" aria-hidden="true">C<span aria-hidden="true">+</span></span>
+                    <span>
+                        <span class="public-nav__brand-name">CareAxis</span>
+                        <span class="public-nav__brand-sub">Hospital system</span>
+                    </span>
+                </a>
+                <nav class="public-nav__links" aria-label="Site">
+                    <a asp-controller="Home" asp-action="Index">Overview</a>
+                    <a asp-controller="Home" asp-action="Security">Security</a>
+                    <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+                    <a asp-controller="Home" asp-action="Support">Support</a>
+                </nav>
+                <div class="public-nav__actions">
+                    <a class="btn btn--sm btn--quiet" asp-controller="Culture" asp-action="Set"
+                       asp-route-culture="@alternateCulture" asp-route-returnUrl="@returnPath"
+                       lang="@alternateCulture" hreflang="@alternateCulture" title="@T("shell.language")">@alternateLabel</a>
+                    <a class="btn btn--sm btn--quiet" asp-controller="Home" asp-action="Demo">Demo access</a>
+                    <a class="btn btn--sm" asp-controller="Account" asp-action="LogIn">Sign in</a>
+                </div>
+            </header>
+
+            <main id="main-content" class="@(ViewData["MainClass"] as string ?? "public-main")" tabindex="-1">
+                @if (TempData["StatusMessage"] is string publicStatus)
+                {
+                    <div class="notice notice--success" role="status" style="margin-bottom:var(--space-5)">
+                        <partial name="_Icon" model="@("check")" />
+                        <div>@publicStatus</div>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] is string publicError)
+                {
+                    <div class="notice notice--danger" role="alert" style="margin-bottom:var(--space-5)">
+                        <partial name="_Icon" model="@("alert")" />
+                        <div>@publicError</div>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+
+            <footer class="public-footer">
+                <div class="public-footer__grid">
+                    <div>
+                        <strong>CareAxis</strong>
+                        <p class="public-footer__note">Synthetic demonstration environment. No real patient data is present.</p>
+                    </div>
+                    <div class="public-footer__links">
+                        <a asp-controller="Home" asp-action="Security">Security</a>
+                        <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        <a asp-controller="Home" asp-action="Terms">Terms</a>
+                        <a asp-controller="Home" asp-action="Support">Support</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    }
+    else
+    {
+    <div class="app">
+        <aside class="sidebar" id="app-sidebar" aria-label="Primary navigation">
+            <a class="sidebar__brand" asp-controller="Home" asp-action="Index" aria-label="CareAxis home">
+                <span class="sidebar__mark" aria-hidden="true">C<span aria-hidden="true">+</span></span>
+                <span class="sidebar__brand-text">
+                    <span class="sidebar__brand-name">CareAxis</span>
+                    <span class="sidebar__brand-sub">Hospital system</span>
+                </span>
+            </a>
+
+            <div class="sidebar__context">
+                <span class="sidebar__context-label">Signed in as</span>
+                <span class="sidebar__context-value">
+                    <span class="badge badge--teal badge--plain">@roleLabel</span>
+                </span>
+            </div>
+
+            <nav class="sidebar__nav">
+                <div class="sidebar__group">
+                    <div class="sidebar__group-label">@T("group.workspace")</div>
+                    @if (User.IsInRole(nameof(Role.Patient)))
+                    {
+                        <a class="sidebar__link @(Active("Patient", "Index") ? "is-active" : "")" asp-controller="Patient" asp-action="Index">
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("dashboard")" /></span><span>My overview</span>
+                        </a>
+                        <a class="sidebar__link @(Active("Patient", "AddAppointment") ? "is-active" : "")" asp-controller="Patient" asp-action="AddAppointment">
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("calendar")" /></span><span>Book a visit</span>
+                        </a>
+                        <a class="sidebar__link @(Active("Patient", "ListAppointments") || Active("Patient", "AppointmentDetails") ? "is-active" : "")" asp-controller="Patient" asp-action="ListAppointments">
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("inbox")" /></span><span>My appointments</span>
+                        </a>
+                        <a class="sidebar__link @(Active("Patient", "GetMedicalRecords") ? "is-active" : "")" asp-controller="Patient" asp-action="GetMedicalRecords">
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("file")" /></span><span>My records</span>
+                        </a>
+                    }
+                    else
+                    {
+                        @if (Has(Permission.ReportView) || Has(Permission.PatientView))
+                        {
+                            <a class="sidebar__link @(Active("Dashboard") ? "is-active" : "")" asp-controller="Dashboard" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("dashboard")" /></span><span>@T("nav.overview")</span>
+                            </a>
+                        }
+                    }
+
+                    @if (Has(Permission.EncounterView) && !User.IsInRole(nameof(Role.Patient)))
+                    {
+                        <a class="sidebar__link @(Active("Encounters") ? "is-active" : "")" asp-controller="Encounters" asp-action="Index">
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("stethoscope")" /></span><span>@T("nav.encounters")</span>
+                        </a>
+                    }
+                    <a class="sidebar__link @(Active("Appointments") ? "is-active" : "")" asp-controller="Appointments" asp-action="Index">
+                        <span class="sidebar__icon"><partial name="_Icon" model="@("calendar")" /></span><span>@T("nav.appointments")</span>
+                    </a>
+                </div>
+
+                @if (Has(Permission.PatientView))
+                {
+                    <div class="sidebar__group">
+                        <div class="sidebar__group-label">@T("group.clinical")</div>
+                        <a class="sidebar__link @(Active("Patients") ? "is-active" : "")" asp-controller="Patients" asp-action="Index">
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("patients")" /></span><span>@T("nav.patients")</span>
+                        </a>
+                        @if (Has(Permission.LabCollect) || Has(Permission.LabEnterResult) || Has(Permission.LabVerify))
+                        {
+                            <a class="sidebar__link @(Active("Laboratory") ? "is-active" : "")" asp-controller="Laboratory" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("flask")" /></span><span>@T("nav.laboratory")</span>
+                            </a>
+                        }
+                        @if (Has(Permission.ImagingReport) || Has(Permission.ImagingOrder))
+                        {
+                            <a class="sidebar__link @(Active("Radiology") ? "is-active" : "")" asp-controller="Radiology" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("scan")" /></span><span>@T("nav.radiology")</span>
+                            </a>
+                        }
+                        @if (Has(Permission.PrescriptionReview) || Has(Permission.PrescriptionDispense) || Has(Permission.InventoryManage))
+                        {
+                            <a class="sidebar__link @(Active("Pharmacy") ? "is-active" : "")" asp-controller="Pharmacy" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("pill")" /></span><span>@T("nav.pharmacy")</span>
+                            </a>
+                        }
+                        @if (Has(Permission.AdmissionView))
+                        {
+                            <a class="sidebar__link @(Active("Admissions") ? "is-active" : "")" asp-controller="Admissions" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("bed")" /></span><span>@T("nav.admissions")</span>
+                            </a>
+                        }
+                    </div>
+                }
+
+                @if (Has(Permission.BillingView) || Has(Permission.ReportView) || Has(Permission.AuditView))
+                {
+                    <div class="sidebar__group">
+                        <div class="sidebar__group-label">@T("group.admin")</div>
+                        @if (Has(Permission.BillingView))
+                        {
+                            <a class="sidebar__link @(Active("Billing") ? "is-active" : "")" asp-controller="Billing" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("invoice")" /></span><span>@T("nav.billing")</span>
+                            </a>
+                        }
+                        @if (Has(Permission.ReportView))
+                        {
+                            <a class="sidebar__link @(Active("Reports") ? "is-active" : "")" asp-controller="Reports" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("report")" /></span><span>@T("nav.reports")</span>
+                            </a>
+                        }
+                        @if (Has(Permission.AuditView))
+                        {
+                            <a class="sidebar__link @(Active("Audit") ? "is-active" : "")" asp-controller="Audit" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("shield")" /></span><span>@T("nav.audit")</span>
+                            </a>
+                        }
+                        @if (Has(Permission.UserManage))
+                        {
+                            <a class="sidebar__link @(Active("Admin") ? "is-active" : "")" asp-controller="Admin" asp-action="Index">
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("users")" /></span><span>@T("nav.administration")</span>
+                            </a>
+                        }
+                    </div>
+                }
+            </nav>
+
+            <div class="sidebar__footer">
+                <div>CareAxis · Clinical workspace</div>
+                <div>Synthetic demonstration data unless configured</div>
+            </div>
+        </aside>
+
+        <div class="main-column">
+            <header class="topbar">
+                <button class="topbar__toggle" type="button" data-sidebar-toggle aria-controls="app-sidebar" aria-expanded="false" aria-label="Toggle navigation">
+                    <partial name="_Icon" model="@("menu")" />
+                </button>
+
+                <nav class="topbar__crumbs" aria-label="Breadcrumb">
+                    <a asp-controller="Home" asp-action="Index">CareAxis</a>
+                    @if (!string.IsNullOrWhiteSpace(sectionName))
+                    {
+                        <span class="sep" aria-hidden="true">/</span><span>@sectionName</span>
+                    }
+                    <span class="sep" aria-hidden="true">/</span><strong aria-current="page">@title</strong>
+                </nav>
+
+                <form class="topbar__search" role="search" asp-controller="Patients" asp-action="Index" method="get">
+                    <partial name="_Icon" model="@("search")" />
+                    <label class="visually-hidden" for="global-search">Search patients</label>
+                    <input id="global-search" type="search" name="term" placeholder="Search patients by name, MRN or phone" autocomplete="off" />
+                </form>
+
+                <div class="topbar__actions">
+                    <a class="btn btn--sm btn--quiet" asp-controller="Culture" asp-action="Set"
+                       asp-route-culture="@alternateCulture" asp-route-returnUrl="@returnPath"
+                       lang="@alternateCulture" hreflang="@alternateCulture" title="@T("shell.language")">@alternateLabel</a>
+                    <a class="icon-button" asp-controller="Reports" asp-action="Index" aria-label="Open reports" title="Reports">
+                        <partial name="_Icon" model="@("report")" />
+                    </a>
+                    <a class="icon-button" asp-controller="Dashboard" asp-action="Index" aria-label="Open alerts" title="Alerts">
+                        <partial name="_Icon" model="@("bell")" />
+                    </a>
+                    <a class="user-chip" asp-controller="Account" asp-action="Profile" aria-label="Account settings">
+                        <span class="user-chip__avatar" aria-hidden="true">@initials</span>
+                        <span class="user-chip__meta">
+                            <span class="user-chip__name">@userName</span>
+                            <span class="user-chip__role">@roleLabel</span>
+                        </span>
+                    </a>
+                    <form asp-controller="Account" asp-action="LogOut" method="post">
+                        <button class="icon-button" type="submit" aria-label="Sign out" title="Sign out">
+                            <partial name="_Icon" model="@("logout")" />
+                        </button>
+                    </form>
+                </div>
+            </header>
+
+            <main id="main-content" class="content" tabindex="-1">
+                @if (!string.IsNullOrWhiteSpace(eyebrow) || !string.IsNullOrWhiteSpace(subtitle) || IsSectionDefined("PageActions"))
+                {
+                    <div class="page-head">
+                        <div>
+                            @if (!string.IsNullOrWhiteSpace(eyebrow))
+                            {
+                                <span class="page-head__eyebrow">@eyebrow</span>
+                            }
+                            <h1 class="page-head__title">@title</h1>
+                            @if (!string.IsNullOrWhiteSpace(subtitle))
+                            {
+                                <p class="page-head__sub">@subtitle</p>
+                            }
+                        </div>
+                        @if (IsSectionDefined("PageActions"))
+                        {
+                            <div class="page-head__actions">
+                                @await RenderSectionAsync("PageActions", required: false)
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (TempData["StatusMessage"] is string statusMessage)
+                {
+                    <div class="notice notice--success" role="status" style="margin-bottom:var(--space-5)">
+                        <partial name="_Icon" model="@("check")" />
+                        <div>@statusMessage</div>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] is string errorMessage)
+                {
+                    <div class="notice notice--danger" role="alert" style="margin-bottom:var(--space-5)">
+                        <partial name="_Icon" model="@("alert")" />
+                        <div>@errorMessage</div>
+                    </div>
+                }
+
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    }
+
+    <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="~/js/app.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

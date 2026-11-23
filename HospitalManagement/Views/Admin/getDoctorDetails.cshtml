@@ -7,8 +7,6 @@
     SelectList selectListItems = new SelectList(Model.specializations, "Id", "Name", Model.SpecializationId);
 }
 
-@section Style {
-    }
 
 
 
@@ -99,43 +97,4 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <script>
-    //     function confirmDelete() {
-    //         var myModal = document.getElementById('myModal')
-    //         var myInput = document.getElementById('myInput')
-
-    //         myModal.addEventListener('shown.bs.modal', function () {
-    //             myInput.focus()
-    //         })
-    //     }
-
-        $("#delete").click(function (e) {
-            e.preventDefault(); // Prevent default form submission
-            const id = $("#IdValue").val();
-            
-
-            // Make an AJAX request to the controller
-            $.ajax({
-                type: "DELETE",
-                url: "/Admin/DeleteDoctorAjax",
-                data: { id: id  },
-                success: function (response) {
-                    /* $("#ContentID").; */ // Display the result
-                    
-                    // document.documentElement.innerHTML = response;
-                    setTimeout(() => {
-                        // Use a publicly accessible URL for testing
-
-                        window.location.href = response.redirect;
-                        // redirect after 1 seconds
-                    }, 1000)
-                    
-                },
-                error: function () {
-                    alert("An error occurred. Please try again.");
-                }
-            });
-        });
-
-    // </script>
 }

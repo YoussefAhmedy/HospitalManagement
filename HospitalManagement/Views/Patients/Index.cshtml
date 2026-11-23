@@ -1,0 +1,80 @@
+@model Hospital.BLL.Common.PagedResult<Hospital.BLL.Services.Abstraction.PatientLookupRow>
+@{
+    string? term = ViewBag.Term;
+    int pageSize = ViewBag.PageSize;
+    var canCreate = User.HasClaim(AppClaimTypes.Permission, Hospital.BLL.Permissions.Permission.PatientCreate);
+}
+@section PageActions {
+    @if (canCreate)
+    {
+        <a class="btn btn--primary" asp-action="Create"><partial name="_Icon" model="@("plus")" /> Register patient</a>
+    }
+}
+
+<div class="filter-bar">
+    <form method="get" asp-action="Index" style="display:flex;gap:var(--space-2);align-items:flex-end;flex:1;flex-wrap:wrap">
+        <div class="field field--grow">
+            <label class="field__label" for="term">Search patients</label>
+            <input class="input" id="term" name="term" value="@term" type="search"
+                   placeholder="Name, MRN, phone or email" autocomplete="off" />
+        </div>
+        <button class="btn btn--primary" type="submit">Search</button>
+        @if (!string.IsNullOrWhiteSpace(term))
+        {
+            <a class="btn btn--quiet" asp-action="Index">Clear</a>
+        }
+    </form>
+</div>
+
+<div class="card card--flush">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Patients</h2>
+            <p class="card__subtitle">@Model.TotalCount result@(Model.TotalCount == 1 ? "" : "s")@(string.IsNullOrWhiteSpace(term) ? "" : $" for '{term}'")</p>
+        </div>
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <partial name="_EmptyState" model="@(("No patients found", string.IsNullOrWhiteSpace(term) ? "Register the first patient to begin." : "Try a different name, MRN or phone number.", "patients"))" />
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">MRN</th>
+                        <th scope="col">Patient</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Date of birth</th>
+                        <th scope="col" class="num">Encounters</th>
+                        <th scope="col">Last visit</th>
+                        <th scope="col" class="actions">Chart</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Items)
+                    {
+                        <tr>
+                            <td class="mono">@row.Mrn</td>
+                            <td class="strong">@row.Name</td>
+                            <td>@(string.IsNullOrWhiteSpace(row.Phone) ? "—" : row.Phone)</td>
+                            <td class="nowrap">@(row.DateOfBirth?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td class="num">@row.Encounters</td>
+                            <td class="nowrap muted">@(row.LastVisitUtc?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td class="actions"><a class="btn btn--sm" asp-action="Details" asp-route-id="@row.Id">Open chart</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-footer">
+            <span>Showing @(((Model.Page - 1) * Model.PageSize) + 1)–@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) of @Model.TotalCount</span>
+            <partial name="_Pager" model="@HospitalManagement.Models.PagerModel.From(
+                new Dictionary<string, string?> { ["term"] = term, ["pageSize"] = pageSize.ToString() },
+                Model.Page, Model.TotalPages, Model.TotalCount, Model.PageSize)" />
+        </div>
+    }
+</div>

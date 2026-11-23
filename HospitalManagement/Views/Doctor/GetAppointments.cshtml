@@ -9,9 +9,6 @@
         @section Style {
          @*    *@
              }
-@section Header {
-    <partial name="_MainNavigation" />
-}
 <div class="container mt-4">
 <div class="container d-flex justify-content-center">
     <div class="table-responsive" style="max-width: 1000px; margin: 0 auto;">
@@ -111,58 +108,5 @@
 
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <script>
-        var inputElement = document.getElementById('show_records');
-        // $("#show_records").change(function (e) {
-                // e.preventDefault(); // Prevent default form submission
-                // const id = $("#IdValue").val();
-
-        inputElement.onchange = function (e) {
-            // Code to execute when the input's value changes
-            // const linkElement = document.getElementById('pres');
-            // linkElement.href = 'https://example.com';
-
-            // // Return the entire element
-            // console.log(linkElement);
-            // Make an AJAX request to the controller
-                $.ajax({
-                    type: "GET",
-                    url: "/Doctor/GetAppoints",
-                data: { num: inputElement.value },
-                    success: function (response) {
-                    var elemen = document.getElementById('Insert');
-                    var link = document.getElementById('pres');
-                        console.log(link);
-                        elemen.innerHTML = "";
-                    const keysToInclude = ["fullName", "date", "notes", "appointId", "status"];
-                    response.forEach(person => {
-                        // Create a new row
-                        const row = document.createElement("tr");
-
-                        // Create and append cells for each property
-                        keysToInclude.forEach(key => {
-                            const cell = document.createElement("td");
-                            cell.textContent = person[key];  // Add the data to the cell
-                            row.appendChild(cell);     // Append the cell to the row
-                        });
-                        const linkCell = document.createElement("td");
-                        link.href = '/Doctor/EditAppointment/' + person['id'];
-                        
-                        linkCell.appendChild(link);
-                        console.log(linkCell);
-                        row.appendChild(linkCell);
-                        // Append the row to the table body
-                        elemen.appendChild(row);
-                    });
-
-                    },
-                    error: function () {
-
-                        console.log();
-                    }
-                });
-            }
-
-        // </script>
 
 }

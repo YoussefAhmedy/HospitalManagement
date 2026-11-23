@@ -1,0 +1,127 @@
+@model Hospital.BLL.Services.Abstraction.ReportResult
+@{
+    dynamic filters = ViewBag.Filters;
+    string? from = filters.from;
+    string? to = filters.to;
+    string? status = filters.status;
+    string? term = filters.term;
+    int pageSize = filters.pageSize;
+    var descriptor = (Hospital.BLL.Services.Abstraction.ReportDescriptor)ViewBag.Descriptor;
+    var canExport = User.HasClaim(Hospital.BLL.Helpers.AppClaimTypes.Permission, Hospital.BLL.Permissions.Permission.ReportExport);
+}
+
+<div class="print-header">
+    <div class="print-header__brand">CareAxis · @Model.Title</div>
+    <div class="print-header__meta">
+        Generated @Model.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC · @Model.FilterSummary · @Model.TotalRows rows
+    </div>
+</div>
+
+<form class="filter-bar no-print" method="get" asp-action="Run" asp-route-key="@Model.Key" data-auto-submit>
+    <input type="hidden" name="pageSize" value="@pageSize" />
+    <div class="field" style="max-width:170px">
+        <label class="field__label" for="from">From</label>
+        <input class="input input--sm" type="date" id="from" name="from" value="@from" />
+    </div>
+    <div class="field" style="max-width:170px">
+        <label class="field__label" for="to">To</label>
+        <input class="input input--sm" type="date" id="to" name="to" value="@to" />
+    </div>
+    <div class="field field--grow">
+        <label class="field__label" for="term">Search</label>
+        <input class="input input--sm" type="search" id="term" name="term" value="@term" placeholder="Name, MRN or reference" />
+    </div>
+    <div class="filter-bar__actions">
+        <button class="btn btn--primary btn--sm" type="submit">Apply filters</button>
+        <a class="btn btn--sm btn--quiet" asp-action="Run" asp-route-key="@Model.Key">Reset</a>
+    </div>
+</form>
+
+<div class="card card--flush">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">@Model.Title</h2>
+            <p class="card__subtitle">
+                @Model.FilterSummary · @Model.TotalRows rows · generated @Model.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+            </p>
+        </div>
+        <div class="btn-row no-print">
+            @if (canExport)
+            {
+                <a class="btn btn--sm" asp-action="Export" asp-route-key="@Model.Key"
+                   asp-route-from="@from" asp-route-to="@to" asp-route-term="@term">
+                    <partial name="_Icon" model="@("download")" /> Export CSV
+                </a>
+            }
+            <button class="btn btn--sm" type="button" data-print>
+                <partial name="_Icon" model="@("print")" /> Print
+            </button>
+        </div>
+    </div>
+
+    @if (Model.Rows.Count == 0)
+    {
+        <partial name="_EmptyState" model="@(("No rows for this period", "Adjust the date range or filters. Reports only show data that exists in the database.", "report"))" />
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        @foreach (var column in Model.Columns)
+                        {
+                            var numeric = column.Format is "number" or "money" or "percent";
+                            <th scope="col" class="@(numeric ? "num" : "")">@column.Label</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            @for (var i = 0; i < Model.Columns.Count; i++)
+                            {
+                                var column = Model.Columns[i];
+                                var value = i < row.Count ? row[i] : "—";
+                                var numeric = column.Format is "number" or "money" or "percent";
+                                if (column.Format == "status")
+                                {
+                                    <td><span class="badge badge--plain">@value</span></td>
+                                }
+                                else
+                                {
+                                    <td class="@(numeric ? "num" : "")">@value</td>
+                                }
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-footer">
+            <span>
+                Showing @(((Model.Page - 1) * Model.PageSize) + 1)–@(Math.Min(Model.Page * Model.PageSize, Model.TotalRows)) of @Model.TotalRows
+            </span>
+            <partial name="_Pager" model="@HospitalManagement.Models.PagerModel.From(
+                new Dictionary<string, string?> { ["key"] = Model.Key, ["from"] = from, ["to"] = to, ["term"] = term, ["pageSize"] = pageSize.ToString() },
+                Model.Page,
+                (int)Math.Ceiling(Model.TotalRows / (double)Model.PageSize),
+                Model.TotalRows,
+                Model.PageSize)" />
+        </div>
+    }
+
+    @if (Model.Summary.Count > 0)
+    {
+        <div class="card__footer">
+            <div class="btn-row" style="gap:var(--space-5)">
+                @foreach (var item in Model.Summary)
+                {
+                    <span><strong>@item.Key:</strong> @item.Value</span>
+                }
+            </div>
+        </div>
+    }
+</div>

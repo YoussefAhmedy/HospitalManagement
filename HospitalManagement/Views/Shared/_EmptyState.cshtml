@@ -1,0 +1,6 @@
+@model (string Title, string Text, string Icon)
+<div class="state">
+    <span class="state__icon"><partial name="_Icon" model="@Model.Icon" /></span>
+    <p class="state__title">@Model.Title</p>
+    <p class="state__text">@Model.Text</p>
+</div>

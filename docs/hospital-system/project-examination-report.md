@@ -84,9 +84,14 @@ behind the new shell and inherit the new design tokens, but their internal quali
 quality. A production deployment should retire them in favour of the new modules rather than
 maintain both.
 
-**5.5 The documentation is extensive and could itself drift.** It is mitigated — the permission
-matrix and the view-hygiene rules are machine-checked — but most of the prose is not. Treat the code
-as authoritative and the documents as a guide that is *currently* accurate.
+**5.5 The documentation is extensive and does drift — demonstrably.** Four separate numbers in this
+document set were wrong before the final reconciliation: the permission count (44 vs 43), the test
+count, the grant-matrix cell count (384 vs 602), and two roles missing from the matrix entirely. All
+four survived review because prose is not checked. The permission matrix is now machine-compared cell
+by cell, the permission count is pinned by a test, and the view rules are static-checked — but the
+remaining prose, including every number in this report, is still maintained by hand. Treat the code
+as authoritative and the documents as accurate *as of the run of record*. The honest lesson is that
+the mitigation should have been built first, not after the errors were found.
 
 **5.6 Scope discipline was imperfect.** Several documents were written describing behaviour before it
 was implemented (the draft/final banners, the segmentation of audit columns), and in two cases the

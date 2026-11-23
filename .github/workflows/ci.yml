@@ -22,7 +22,29 @@ jobs:
       - name: Build
         run: dotnet build HospitalManagement.sln --configuration Release --no-restore
       - name: Test
-        run: dotnet test HospitalManagement.sln --configuration Release --no-build --verbosity normal
+        run: >
+          dotnet test HospitalManagement.sln
+          --configuration Release --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --logger "console;verbosity=normal"
+
+      # Test failures do not produce annotations on their own, so the TRX file is parsed
+      # into a compact failure list. This keeps a red build diagnosable from the API
+      # without downloading logs.
+      - name: Summarise failing tests
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+          for path in glob.glob('**/test-results.trx', recursive=True):
+              root = ET.parse(path).getroot()
+              for result in root.findall('.//t:UnitTestResult', ns):
+                  if result.get('outcome') == 'Failed':
+                      message = result.find('t:Output/t:ErrorInfo/t:Message', ns)
+                      text = ' '.join((message.text or '').split()) if message is not None else 'failed'
+                      print(f"::error title=Test failed::{result.get('testName')}: {text[:600]}")
+          PY
 
   migrations:
     # Generates the EF Core migration from the model so the database schema is never

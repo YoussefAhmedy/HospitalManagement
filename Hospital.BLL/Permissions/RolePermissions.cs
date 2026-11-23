@@ -36,7 +36,7 @@ public static class RolePermissions
         [
             Permission.PatientView, Permission.AppointmentView, Permission.TriageRecord,
             Permission.EncounterView, Permission.EncounterDocument, Permission.LabCollect,
-            Permission.AdmissionView, Permission.BedManage
+            Permission.AdmissionView, Permission.BedManage, Permission.ReportView
         ],
         [Role.Receptionist] =
         [

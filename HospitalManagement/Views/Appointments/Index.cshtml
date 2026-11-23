@@ -8,7 +8,7 @@
     var queue = (Hospital.BLL.Services.Abstraction.DepartmentQueue)ViewBag.Queue;
     bool canManage = User.HasClaim(AppClaimTypes.Permission, Hospital.BLL.Permissions.Permission.AppointmentManage);
     bool canCheckIn = User.HasClaim(AppClaimTypes.Permission, Hospital.BLL.Permissions.Permission.AppointmentCheckIn);
-    var statuses = new[] { "Pending", "Approved", "CheckedIn", "Completed", "NoShow", "Cancelled" };
+    var statuses = Enum.GetNames<Hospital.DAL.Entities.OwnedTypes.AppointStatus>();
 }
 
 @section PageActions {

@@ -55,7 +55,7 @@ public sealed class SlotRulesTests
         Assert.IsTrue(SlotRules.OccupiesSlot(AppointStatus.Completed));
         Assert.IsTrue(SlotRules.OccupiesSlot(AppointStatus.NoShow));
         Assert.IsFalse(SlotRules.OccupiesSlot(AppointStatus.Cancelled));
-        Assert.IsFalse(SlotRules.OccupiesSlot(AppointStatus.Declined));
+        Assert.IsFalse(SlotRules.OccupiesSlot(AppointStatus.NotApproved), "A declined request releases the slot.");
     }
 
     [TestMethod]

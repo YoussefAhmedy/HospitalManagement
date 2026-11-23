@@ -14,7 +14,50 @@
     var latestVitals = Model.Vitals.OrderByDescending(v => v.RecordedAtUtc).FirstOrDefault();
     var editable = Hospital.BLL.Common.Rules.EncounterRules.IsEditable(Model.Status);
     var severeAllergy = Model.Patient?.Allergies?.Any(a => a.Severity == Hospital.DAL.Entities.AllergySeverity.Severe) == true;
+    var isFinal = Model.Status == EncounterStatus.Signed;
+    var isAwaitingSignature = Model.Status == EncounterStatus.Completed;
+    var draftSignedNotes = Model.Notes.Count(n => n.Status == Hospital.DAL.Entities.Clinical.NoteStatus.Signed);
+    var draftNotes = Model.Notes.Count(n => n.Status == Hospital.DAL.Entities.Clinical.NoteStatus.Draft);
+    var signedBy = Model.SignedByUserId is null ? null : directory.Staff.FirstOrDefault(p => p.Id == Model.SignedByUserId)?.Label;
 }
+
+@* Record authority. A clinical record must state plainly whether it is a draft or the
+   final signed report, because the two carry entirely different clinical weight. *@
+@if (isFinal)
+{
+    <div class="notice notice--success" style="margin-bottom:var(--space-5)">
+        <partial name="_Icon" model="@("shield")" />
+        <div>
+            <div class="notice__title">Finalized report</div>
+            Signed@(signedBy is null ? "" : $" by {signedBy}") on @Model.SignedAtUtc?.ToString("yyyy-MM-dd HH:mm") UTC.
+            This record is closed; corrections must be recorded as an amendment.
+        </div>
+    </div>
+}
+else if (isAwaitingSignature)
+{
+    <div class="notice notice--warning" style="margin-bottom:var(--space-5)">
+        <partial name="_Icon" model="@("alert")" />
+        <div>
+            <div class="notice__title">Not yet final</div>
+            Documentation is complete but awaiting signature. @(draftNotes > 0
+                ? $"{draftNotes} note(s) are still unsigned and must be signed before this record can be finalized."
+                : "A clinician with signing rights must sign this record to finalize it.")
+        </div>
+    </div>
+}
+else
+{
+    <div class="notice notice--info" style="margin-bottom:var(--space-5)">
+        <partial name="_Icon" model="@("info")" />
+        <div>
+            <div class="notice__title">Draft — not a final report</div>
+            This encounter is in progress (@Model.Status). Content is provisional and must not be used as a final report.
+        </div>
+    </div>
+}
+
+<div class="print-draft-banner">@(isFinal ? "Finalized report" : "Draft — not a final report")</div>
 
 @section PageActions {
     <partial name="_StatusBadge" model="status" />

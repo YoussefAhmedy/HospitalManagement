@@ -1252,6 +1252,22 @@ dialog.dialog::backdrop { background: rgba(10, 22, 34, .45); backdrop-filter: bl
 }
 
 .print-header { display: none; }
+
+/* A draft clinical record must announce itself on paper as clearly as on screen. */
+@media print {
+    .print-draft-banner {
+        display: block !important;
+        margin-bottom: 8mm;
+        padding: 3mm 4mm;
+        border: 1px solid #8a5300;
+        color: #8a5300;
+        font-size: 10pt;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+}
+.print-draft-banner { display: none; }
 .print-header__brand { font-size: 13pt; font-weight: 700; letter-spacing: -.02em; }
 .print-header__meta { font-size: 9pt; color: #4a6076; }
 

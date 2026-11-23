@@ -114,13 +114,5 @@
 </form>
 
 @section Scripts {
-    <script>
-        // Selecting a slot also selects the clinician that owns it, keeping the two
-        // form fields consistent without duplicating the availability data.
-        document.querySelectorAll('input[name="slotMinutes"]').forEach(function (radio) {
-            radio.addEventListener('change', function () {
-                document.getElementById('doctorId').value = this.dataset.doctor;
-            });
-        });
-    </script>
+    <script src="~/js/booking.js" asp-append-version="true"></script>
 }

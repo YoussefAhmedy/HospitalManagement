@@ -305,14 +305,32 @@ public class Program
                 headers["X-Frame-Options"] = "DENY";
                 headers["Referrer-Policy"] = "no-referrer";
                 headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+                // No inline script is emitted anywhere in the application: every handler
+                // lives in wwwroot/js. Scripts are therefore restricted to same-origin
+                // files, which removes the main XSS payload surface. Inline *styles* remain
+                // permitted only for the small set of layout offsets produced by Razor,
+                // and will be removed when those are moved into the stylesheet.
                 headers["Content-Security-Policy"] =
                     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
                     "form-action 'self'; img-src 'self' data: blob:; font-src 'self' data:; " +
-                    "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';";
+                    "style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self';";
 
+                // Medical and financial pages must never be cached by a shared proxy or
+                // survive the back button after sign-out.
                 if (context.Request.Path.StartsWithSegments("/Patient") ||
+                    context.Request.Path.StartsWithSegments("/Patients") ||
                     context.Request.Path.StartsWithSegments("/Doctor") ||
                     context.Request.Path.StartsWithSegments("/Admin") ||
+                    context.Request.Path.StartsWithSegments("/Encounters") ||
+                    context.Request.Path.StartsWithSegments("/Appointments") ||
+                    context.Request.Path.StartsWithSegments("/Laboratory") ||
+                    context.Request.Path.StartsWithSegments("/Radiology") ||
+                    context.Request.Path.StartsWithSegments("/Pharmacy") ||
+                    context.Request.Path.StartsWithSegments("/Admissions") ||
+                    context.Request.Path.StartsWithSegments("/Billing") ||
+                    context.Request.Path.StartsWithSegments("/Reports") ||
+                    context.Request.Path.StartsWithSegments("/Audit") ||
+                    context.Request.Path.StartsWithSegments("/Dashboard") ||
                     context.Request.Path.StartsWithSegments("/Account/Profile"))
                 {
                     headers.CacheControl = "no-store, private";

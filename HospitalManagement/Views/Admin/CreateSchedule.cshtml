@@ -17,7 +17,7 @@
         <h2>Create schedule</h2>
 
         <form asp-action="CreateSchedule" asp-controller="Admin" method="post" >
-            <div class="text-success" id="Success">@ViewBag.Success</div>
+            <div class="text-success" id="Success" data-auto-dismiss="5000">@ViewBag.Success</div>
             <div asp-validation-summary="All" class="text-danger"></div>
             <div class="form-group">
                 <label asp-for="Day"></label>
@@ -85,13 +85,5 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <script>
-
-        setTimeout(function () {
-            document.getElementById("Success").innerHTML = "";
-        }, 5000);
-
-    </script>
+    <script src="~/js/flash-dismiss.js" asp-append-version="true"></script>
 }
-
-

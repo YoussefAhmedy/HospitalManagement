@@ -80,25 +80,4 @@
         
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <script>
-        $("#delete").click(function (e) {
-            e.preventDefault(); // Prevent default form submission
-            const id = $("#IdValue").val();
-
-            // Make an AJAX request to the controller
-            $.ajax({
-                type: "DELETE",
-                url: "/Patient/DeleteAppointment",
-                data: { id: id },
-                success: function (response) {
-                    setTimeout(() => {
-                        window.location.href = response.redirect; // Redirect after 1 second
-                    }, 1000);
-                },
-                error: function () {
-                    alert("An error occurred. Please try again.");
-                }
-            });
-        });
-    </script>
 }

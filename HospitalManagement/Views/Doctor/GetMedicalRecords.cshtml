@@ -101,47 +101,5 @@
 
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <script>
-        var inputElement = document.getElementById('show_records');
-        // $("#show_records").change(function (e) {
-                // e.preventDefault(); // Prevent default form submission
-                // const id = $("#IdValue").val();
-
-        inputElement.onchange = function (e) {
-            // Code to execute when the input's value changes
-        
-                // Make an AJAX request to the controller
-                $.ajax({
-                    type: "GET",
-                    url: "/Doctor/GetRecords",
-                data: { num: inputElement.value },
-                    success: function (response) {
-                    var elemen = document.getElementById('Insert');
-                        elemen.innerHTML = "";
-                    const keysToInclude = ["diagnosis", "treatment", "recordDate", "fullName","email","phone"];
-                    response.forEach(person => {
-                        // Create a new row
-                        const row = document.createElement("tr");
-
-                        // Create and append cells for each property
-                        keysToInclude.forEach(key => {
-                            const cell = document.createElement("td");
-                            cell.textContent = person[key];  // Add the data to the cell
-                            row.appendChild(cell);     // Append the cell to the row
-                        });
-
-                        // Append the row to the table body
-                        elemen.appendChild(row);
-                    });
-
-                    },
-                    error: function () {
-
-                        console.log();
-                    }
-                });
-            }
-
-        // </script>
 
 }

@@ -56,15 +56,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        // Selecting a catalogue service fills the description so the invoice line and the
-        // service catalogue cannot drift apart by a typing mistake.
-        document.getElementById('serviceItemId')?.addEventListener('change', function () {
-            const option = this.options[this.selectedIndex];
-            const description = document.getElementById('description');
-            if (option?.dataset.label) {
-                description.value = option.dataset.label;
-            }
-        });
-    </script>
+    <script src="~/js/invoice.js" asp-append-version="true"></script>
 }

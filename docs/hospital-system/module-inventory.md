@@ -118,3 +118,156 @@ Each row states *verified evidence*, the *target state*, and the *decision* for 
 - **Present but insufficient and extended:** 8.
 - **Absent and to be built:** 22 modules/workflows.
 - **Explicitly out of scope (documented):** DICOM/PACS imaging archive, payment-gateway/insurance clearing-house integration, server-side PDF rendering, e-prescribing networks, SMS gateways, multi-tenant database sharding.
+
+---
+
+# Delivered State (post-transformation)
+
+The tables above record the audit of the original system and the decision taken for each capability.
+This section records what was **actually delivered**, so the inventory cannot be read as an
+aspiration list.
+
+Legend: **Done** · **Partial** · **Documented gap**
+
+## Identity, access and audit
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Registration, email confirmation, lockout, password policy | Done | `Program.cs`, `AccountController` |
+| Password reset, resend confirmation, email change | Done | `AccountController` |
+| Optional Google OAuth | Done (unverified against a live tenant) | `Program.cs` |
+| Admin bootstrap, no default admin | Done | `Program.BootstrapAdminAsync` |
+| 14 roles | Done | `Hospital.BLL/Helpers/Role.cs` |
+| 44 permissions, policy-enforced | Done | `Permission.cs`, `RolePermissions.cs`, `Program.cs` |
+| Least-privilege grant matrix, machine-verified | Done | `user-roles-permissions.md`, 384-cell comparison |
+| Segregation of duties (prescribe/dispense, author/audit, record/approve refund) | Done | `EncounterAndPermissionTests`, `BillingService.ApproveRefundAsync` |
+| Audit trail, append-only, metadata only | Done | `AuditLog`, `AuditLogger`, `AuditController` |
+| Audit tamper-evidence, IP capture, SIEM forwarding | Documented gap | `data-architecture.md` §5 |
+| MFA | Documented gap | `security-privacy-review.md` §2 |
+| Branch/tenant scoping, `BranchAdmin`, `InsuranceOfficer` | Documented gap | `user-roles-permissions.md` §6 |
+
+## Patient management
+
+| Capability | Status | Evidence |
+|---|---|---|
+| MRN with gap-free sequence | Done | `NumberSequenceService`, `PT-000001` |
+| Duplicate guard at registration | Done | `PatientLookupService.HasSimilarAsync` + `ConfirmDuplicate` |
+| Allergies, documented history, blood group | Done | `Patient`, chart view |
+| Server-side search, filter, paging | Done | `PatientsController` |
+| Consolidated patient chart | Done | `Patients/Details` |
+| Patient document uploads | Documented gap | Only profile images are stored |
+| Sensitive-field redaction (`patient.view.sensitive`) | Documented gap | Permission defined, unenforced |
+
+## Appointments and scheduling
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Weekly clinician schedule → interval slots | Done | `Schedule`, `SlotRules.GenerateSlots` |
+| Date + slot booking | Done | `AppointmentsController.Book` |
+| Conflict prevention | Done | `SlotRules` + filtered unique index `UX_Appointments_DoctorSlot` |
+| Check-in opening an encounter | Done | `CheckInAsync` |
+| Cancel, reschedule, no-show | Done | `SlotRules` transitions |
+| Calendar day view | Done | Availability board per clinician |
+
+## Clinical encounters
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Lifecycle Registered → Triaged → InConsultation → Completed → Signed | Done | `EncounterRules` |
+| Structured vitals with range validation | Done | `VitalSign` |
+| Notes: draft → signed, immutable, amendments | Done | `ClinicalNote`, `AmendsNoteId` |
+| Diagnoses per encounter | Done | `Diagnosis` |
+| Orders from the encounter (lab, imaging, prescription) | Done | inline forms in `Encounters/Details` |
+| Severe-allergy alert | Done | chart banner |
+| Concurrency tokens on notes | Documented gap | No `RowVersion` |
+
+## Laboratory
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Ten-state specimen workflow | Done | `LabRules.Transitions` |
+| Separate verify and release permissions | Done | `lab.result.verify`, `lab.result.release` |
+| Unverified results never final | Done | `LabRules.IsClinicallyFinal`, tested |
+| Reference-range classification | Done | `LabRules.Classify`, tested |
+| Turnaround reporting | Done | `lab-throughput` report |
+
+## Radiology
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Request → schedule → performed → reported → verified → released | Done | `ImagingOrderStatus`, `ImagingService` |
+| Radiologist-authored findings and impression | Done | `SaveReportAsync` (no generated text) |
+| Author and verifier recorded separately | Done | `RadiologistUserId` / `VerifiedByUserId` |
+| DICOM / PACS / image storage | Documented gap | Explicitly out of scope |
+
+## Pharmacy
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Prescription → review → dispense | Done | `PrescriptionStatus`, `PharmacyService` |
+| Prescriptions only from a clinician's order | Done | `CreateAsync` requires a live encounter |
+| Stock ledger with batches and expiry | Done | `StockBatch`, `StockMovement` |
+| Inventory and expiry reports | Done | `inventory`, `expiry` |
+
+## Admissions and beds
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Ward → room → bed hierarchy | Done | `Ward`, `Room`, `Bed` |
+| Occupancy-safe assignment | Done | filtered unique index `UX_BedAssignments_ActiveOccupancy` |
+| Transfer and discharge | Done | `AdmissionService` |
+| Live bed board | Done | `Admissions/Index` |
+
+## Billing and insurance
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Service catalogue, invoices, lines | Done | `BillingService.CreateInvoiceAsync` |
+| Payments with overpayment rejection | Done | `BillingRules.IsPaymentValid` |
+| Refunds with two-officer approval | Done | `ApproveRefundAsync` |
+| Insurance coverage application | Done | `BillingRules.InsuranceCoverage` |
+| Payment gateway, claim submission | Documented gap | Recorded ledger only |
+
+## Reporting and analytics
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Role dashboards from live queries | Done | `WorkspaceService` |
+| 18 parameterised reports | Done | `ReportService.Catalogue` |
+| Filters, search, paging, summary, generation timestamp | Done | `Reports/Run` |
+| CSV export with audit | Done | `Reports/Export`, `report.export` |
+| Print layout | Done | print stylesheet |
+| Permission gating per report | Done | descriptor permission + re-check on run/export |
+| XLSX, server-side PDF, scheduled delivery | Documented gap | `reporting-specification.md` §6 |
+
+## Platform, UX, i18n, accessibility
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Tokenised design system | Done | `design-system.md`, `design-system.css` |
+| Role-aware application shell | Done | `_AppShell.cshtml` |
+| Public shell for signed-out visitors | Done | `_AppShell.cshtml` |
+| Tables, drawers, dialogs, toasts, empty states, pager | Done | `Views/Shared` |
+| English + Arabic with real RTL | Done | `UiText`, `CultureController`, logical properties |
+| Responsive down to 320px | Done | breakpoints, `.table-wrap` |
+| WCAG-oriented markup, focus, reduced motion, forced colours | Done (unverified by tooling) | `design-system.md` §8 |
+| Native-speaker Arabic review, axe/Pa11y run, screen-reader pass | Documented gap | No browser/assessor available |
+
+## Testing
+
+| Capability | Status | Evidence |
+|---|---|---|
+| 58 unit tests over eight suites | Done | `Hospital.Tests`, `test-plan.md` |
+| Static view-hygiene tests (CSP, tokens, encoding) | Done | `ViewHygieneTests` |
+| CI annotation of failing tests | Done | `.github/workflows/ci.yml` |
+| EF model validation test | Documented gap | Requires design-time model build; deferred |
+| Database integration tests (constraints firing) | Documented gap | No SQL Server available |
+| Playwright E2E, visual regression, axe | Documented gap | Scenarios specified, runner unavailable |
+
+## Delivered summary
+
+| Classification | Count |
+|---|---|
+| Capabilities delivered as working software | 62 |
+| Delivered with a disclosed limitation | 9 |
+| Documented gaps with a stated prerequisite | 15 |

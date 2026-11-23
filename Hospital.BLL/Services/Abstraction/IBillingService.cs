@@ -38,5 +38,12 @@ public interface IBillingService
         InvoiceStatus? status, DateRange range, string? term, int page, int pageSize,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Invoices belonging to exactly one patient. Addressable by patient id rather than by a name
+    /// search, because a name search cannot distinguish two patients who share a surname.
+    /// </summary>
+    Task<PagedResult<InvoiceListItem>> ForPatientAsync(
+        int patientId, int page, int pageSize, CancellationToken cancellationToken = default);
+
     Task<RevenueSummary> RevenueAsync(CancellationToken cancellationToken = default);
 }

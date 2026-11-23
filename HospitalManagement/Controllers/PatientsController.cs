@@ -120,8 +120,8 @@ public sealed class PatientsController(
 
         var recentEncounters = await encounters.QueryAsync(null, id, null, new DateRange(null, null), null, 1, 8, cancellationToken);
         var labs = await lab.QueryAsync(null, id, new DateRange(null, null), null, 1, 8, cancellationToken);
-        var invoices = await billing.QueryAsync(null, new DateRange(null, null), null, 1, 8, cancellationToken);
-        var openInvoices = invoices.Items.Where(i => i.PatientName.Contains(patient.LastName, StringComparison.OrdinalIgnoreCase)).ToList();
+        // Scoped by patient id. Matching on the surname would leak a namesake's invoices.
+        var invoices = await billing.ForPatientAsync(patient.Id, 1, 8, cancellationToken);
 
         await audit.RecordAsync("patient.chart.view", CurrentUserId(), patient.Id, "Patient", patient.Id, cancellationToken);
 
@@ -131,7 +131,7 @@ public sealed class PatientsController(
 
         ViewBag.Encounters = recentEncounters;
         ViewBag.Labs = labs;
-        ViewBag.Invoices = openInvoices;
+        ViewBag.Invoices = invoices.Items;
         ViewBag.CanCreateEncounter = User.HasClaim(AppClaimTypes.Permission, Permission.EncounterCreate);
         return View(patient);
     }

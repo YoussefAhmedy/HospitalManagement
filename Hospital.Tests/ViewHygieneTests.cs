@@ -107,4 +107,25 @@ public sealed class ViewHygieneTests
         Assert.AreEqual(0, offenders.Count,
             "The legacy layout and navigation partials were removed in favour of _AppShell. Offenders: " + string.Join(", ", offenders));
     }
+
+    /// <summary>
+    /// A patient's own data must never be assembled by matching a display name. Two patients can
+    /// share a surname, so a name match discloses one patient's record on another's chart. This is
+    /// a regression guard for defect 16: the chart used to select invoices by surname substring.
+    /// </summary>
+    [TestMethod]
+    public void NoView_ScopesPatientDataByDisplayName()
+    {
+        var offenders = Views()
+            .Where(v => Regex.IsMatch(
+                v.Content,
+                @"\.(LastName|FirstName|PatientName)\s*\.\s*Contains|\.PatientName\s*==",
+                RegexOptions.IgnoreCase))
+            .Select(v => v.Relative)
+            .ToList();
+
+        Assert.AreEqual(0, offenders.Count,
+            "Patient-scoped data must be filtered by identifier, never by a display name. " +
+            "Offenders: " + string.Join(", ", offenders));
+    }
 }

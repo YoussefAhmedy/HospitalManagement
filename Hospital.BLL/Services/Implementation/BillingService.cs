@@ -189,6 +189,29 @@ public sealed class BillingService(
             .Include(i => i.Payments)
             .FirstOrDefaultAsync(i => i.Id == invoiceId, cancellationToken);
 
+    public async Task<PagedResult<InvoiceListItem>> ForPatientAsync(
+        int patientId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        // Filter on the foreign key, never on a name. Two patients may share a surname; a name
+        // search would then disclose one patient's financial record to the other.
+        var query = dbContext.Invoices
+            .AsNoTracking()
+            .Where(i => i.PatientId == patientId);
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(i => i.IssuedAtUtc)
+            .Skip((Math.Max(page, 1) - 1) * pageSize)
+            .Take(pageSize)
+            .Select(i => new InvoiceListItem(
+                i.Id, i.Number, i.Patient!.Mrn ?? "—",
+                (i.Patient.FirstName + " " + i.Patient.LastName),
+                i.IssuedAtUtc, i.Status, i.Total, i.InsuranceCovered, i.Paid, i.Balance))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<InvoiceListItem>(items, total, Math.Max(page, 1), pageSize);
+    }
+
     public async Task<PagedResult<InvoiceListItem>> QueryAsync(
         InvoiceStatus? status, DateRange range, string? term, int page, int pageSize,
         CancellationToken cancellationToken = default)

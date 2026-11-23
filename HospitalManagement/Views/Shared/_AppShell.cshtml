@@ -40,8 +40,17 @@
         string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
         && (action is null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase));
 }
+@{
+    var uiCulture = System.Globalization.CultureInfo.CurrentUICulture;
+    var languageCode = uiCulture.TwoLetterISOLanguageName == "ar" ? "ar" : "en";
+    var isRtl = languageCode == "ar";
+    var alternateCulture = isRtl ? "en" : "ar";
+    var alternateLabel = isRtl ? "English" : "العربية";
+    string T(string key) => Hospital.BLL.Common.UiText.For(key, uiCulture.Name);
+    var returnPath = $"{Context.Request.Path}{Context.Request.QueryString}";
+}
 <!doctype html>
-<html lang="@(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)">
+<html lang="@languageCode" dir="@(isRtl ? "rtl" : "ltr")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -53,8 +62,8 @@
     <link rel="stylesheet" href="~/css/design-system.css" asp-append-version="true" />
     @await RenderSectionAsync("Style", required: false)
 </head>
-<body class="@bodyClass" data-app-shell>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
+<body class="@bodyClass" data-app-shell data-direction="@(isRtl ? "rtl" : "ltr")">
+    <a class="skip-link" href="#main-content">@T("shell.skip")</a>
 
     @if (!isAuthenticated)
     {
@@ -74,6 +83,9 @@
                     <a asp-controller="Home" asp-action="Support">Support</a>
                 </nav>
                 <div class="public-nav__actions">
+                    <a class="btn btn--sm btn--quiet" asp-controller="Culture" asp-action="Set"
+                       asp-route-culture="@alternateCulture" asp-route-returnUrl="@returnPath"
+                       lang="@alternateCulture" hreflang="@alternateCulture" title="@T("shell.language")">@alternateLabel</a>
                     <a class="btn btn--sm" asp-controller="Account" asp-action="LogIn">Sign in</a>
                 </div>
             </header>
@@ -133,7 +145,7 @@
 
             <nav class="sidebar__nav">
                 <div class="sidebar__group">
-                    <div class="sidebar__group-label">Workspace</div>
+                    <div class="sidebar__group-label">@T("group.workspace")</div>
                     @if (User.IsInRole(nameof(Role.Patient)))
                     {
                         <a class="sidebar__link @(Active("Patient", "Index") ? "is-active" : "")" asp-controller="Patient" asp-action="Index">
@@ -154,7 +166,7 @@
                         @if (Has(Permission.ReportView) || Has(Permission.PatientView))
                         {
                             <a class="sidebar__link @(Active("Dashboard") ? "is-active" : "")" asp-controller="Dashboard" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("dashboard")" /></span><span>Overview</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("dashboard")" /></span><span>@T("nav.overview")</span>
                             </a>
                         }
                     }
@@ -162,43 +174,43 @@
                     @if (Has(Permission.EncounterView) && !User.IsInRole(nameof(Role.Patient)))
                     {
                         <a class="sidebar__link @(Active("Encounters") ? "is-active" : "")" asp-controller="Encounters" asp-action="Index">
-                            <span class="sidebar__icon"><partial name="_Icon" model="@("stethoscope")" /></span><span>Encounters</span>
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("stethoscope")" /></span><span>@T("nav.encounters")</span>
                         </a>
                     }
                     <a class="sidebar__link @(Active("Appointments") ? "is-active" : "")" asp-controller="Appointments" asp-action="Index">
-                        <span class="sidebar__icon"><partial name="_Icon" model="@("calendar")" /></span><span>Appointments</span>
+                        <span class="sidebar__icon"><partial name="_Icon" model="@("calendar")" /></span><span>@T("nav.appointments")</span>
                     </a>
                 </div>
 
                 @if (Has(Permission.PatientView))
                 {
                     <div class="sidebar__group">
-                        <div class="sidebar__group-label">Clinical</div>
+                        <div class="sidebar__group-label">@T("group.clinical")</div>
                         <a class="sidebar__link @(Active("Patients") ? "is-active" : "")" asp-controller="Patients" asp-action="Index">
-                            <span class="sidebar__icon"><partial name="_Icon" model="@("patients")" /></span><span>Patient directory</span>
+                            <span class="sidebar__icon"><partial name="_Icon" model="@("patients")" /></span><span>@T("nav.patients")</span>
                         </a>
                         @if (Has(Permission.LabCollect) || Has(Permission.LabEnterResult) || Has(Permission.LabVerify))
                         {
                             <a class="sidebar__link @(Active("Laboratory") ? "is-active" : "")" asp-controller="Laboratory" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("flask")" /></span><span>Laboratory</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("flask")" /></span><span>@T("nav.laboratory")</span>
                             </a>
                         }
                         @if (Has(Permission.ImagingReport) || Has(Permission.ImagingOrder))
                         {
                             <a class="sidebar__link @(Active("Radiology") ? "is-active" : "")" asp-controller="Radiology" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("scan")" /></span><span>Radiology</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("scan")" /></span><span>@T("nav.radiology")</span>
                             </a>
                         }
                         @if (Has(Permission.PrescriptionReview) || Has(Permission.PrescriptionDispense) || Has(Permission.InventoryManage))
                         {
                             <a class="sidebar__link @(Active("Pharmacy") ? "is-active" : "")" asp-controller="Pharmacy" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("pill")" /></span><span>Pharmacy</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("pill")" /></span><span>@T("nav.pharmacy")</span>
                             </a>
                         }
                         @if (Has(Permission.AdmissionView))
                         {
                             <a class="sidebar__link @(Active("Admissions") ? "is-active" : "")" asp-controller="Admissions" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("bed")" /></span><span>Admissions &amp; beds</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("bed")" /></span><span>@T("nav.admissions")</span>
                             </a>
                         }
                     </div>
@@ -207,29 +219,29 @@
                 @if (Has(Permission.BillingView) || Has(Permission.ReportView) || Has(Permission.AuditView))
                 {
                     <div class="sidebar__group">
-                        <div class="sidebar__group-label">Administration</div>
+                        <div class="sidebar__group-label">@T("group.admin")</div>
                         @if (Has(Permission.BillingView))
                         {
                             <a class="sidebar__link @(Active("Billing") ? "is-active" : "")" asp-controller="Billing" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("invoice")" /></span><span>Billing</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("invoice")" /></span><span>@T("nav.billing")</span>
                             </a>
                         }
                         @if (Has(Permission.ReportView))
                         {
                             <a class="sidebar__link @(Active("Reports") ? "is-active" : "")" asp-controller="Reports" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("report")" /></span><span>Reports</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("report")" /></span><span>@T("nav.reports")</span>
                             </a>
                         }
                         @if (Has(Permission.AuditView))
                         {
                             <a class="sidebar__link @(Active("Audit") ? "is-active" : "")" asp-controller="Audit" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("shield")" /></span><span>Audit trail</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("shield")" /></span><span>@T("nav.audit")</span>
                             </a>
                         }
                         @if (Has(Permission.UserManage))
                         {
                             <a class="sidebar__link @(Active("Admin") ? "is-active" : "")" asp-controller="Admin" asp-action="Index">
-                                <span class="sidebar__icon"><partial name="_Icon" model="@("users")" /></span><span>Administration</span>
+                                <span class="sidebar__icon"><partial name="_Icon" model="@("users")" /></span><span>@T("nav.administration")</span>
                             </a>
                         }
                     </div>
@@ -264,6 +276,9 @@
                 </form>
 
                 <div class="topbar__actions">
+                    <a class="btn btn--sm btn--quiet" asp-controller="Culture" asp-action="Set"
+                       asp-route-culture="@alternateCulture" asp-route-returnUrl="@returnPath"
+                       lang="@alternateCulture" hreflang="@alternateCulture" title="@T("shell.language")">@alternateLabel</a>
                     <a class="icon-button" asp-controller="Reports" asp-action="Index" aria-label="Open reports" title="Reports">
                         <partial name="_Icon" model="@("report")" />
                     </a>

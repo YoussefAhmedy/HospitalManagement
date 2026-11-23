@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Net;
 using System.Threading.RateLimiting;
@@ -25,6 +26,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace HospitalManagement;
@@ -214,6 +216,28 @@ public class Program
             };
         });
 
+        // Interface localisation: English (default) and Arabic with right-to-left layout.
+        // Dates and numbers use a fixed invariant-ish culture so clinical values never shift
+        // between locales; only interface text and text direction change.
+        builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+        builder.Services.Configure<RequestLocalizationOptions>(options =>
+        {
+            var supported = new[]
+            {
+                new CultureInfo("en"),
+                new CultureInfo("ar")
+            };
+
+            options.DefaultRequestCulture = new RequestCulture("en");
+            options.SupportedCultures = supported;
+            options.SupportedUICultures = supported;
+            options.RequestCultureProviders =
+            [
+                new CookieRequestCultureProvider(),
+                new AcceptLanguageHeaderRequestCultureProvider()
+            ];
+        });
+
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddAutoMapper(configuration => configuration.AddProfile<DomainProfile>());
         builder.Services.AddScoped<IEmailSender, EmailSender>();
@@ -303,6 +327,7 @@ public class Program
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseRequestLocalization();
         app.UseRouting();
         app.UseRateLimiter();
         app.UseAuthentication();

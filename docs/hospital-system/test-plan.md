@@ -29,7 +29,7 @@ that the invariants that matter are testable without a database.
         ├───────────────────────────────────────────────┤
         │  Not executed: repository integration tests   │  ← needs SQL Server
         ├───────────────────────────────────────────────┤
-        │  Executed: 58 pure-unit tests, 190+ assertions │  ← runs on every push
+        │  Executed: 59 pure-unit tests, 190+ assertions │  ← runs on every push
         └───────────────────────────────────────────────┘
 ```
 
@@ -57,7 +57,7 @@ test boundary there gives high defect detection per test and no infrastructure c
 | `EncounterAndPermissionTests` | 14 | Encounter transition graph, signed-record immutability, sign preconditions, note edit permission, five role-boundary assertions, permission catalogue integrity, query normalisation and paging route preservation |
 | `LocalisationTests` | 4 | Every key translated to Arabic, unknown-key fallback, RTL detection, regional-culture resolution |
 | `ResourceOwnershipTests` | 1 | Ownership predicate rejects null/whitespace/mismatched ids |
-| `ViewHygieneTests` | 6 | No inline script, no inline event handlers, no hard-coded colours, no unencoded HTML outside the icon catalogue, no duplicate `Scripts` section, no reference to the retired layout partials |
+| `ViewHygieneTests` | 7 | No inline script, no inline event handlers, no hard-coded colours, no unencoded HTML outside the icon catalogue, no duplicate `Scripts` section, no reference to the retired layout partials, no patient data scoped by display name |
 | **Total** | **58** | |
 
 ### Positive and negative coverage of the brief's named scenarios
@@ -120,6 +120,7 @@ having the loop.
 | 13 | Client-side validation loaded jQuery **validation** but never jQuery itself, so unobtrusive validation was silently dead | Inspecting the CSP work | Partial now loads jQuery from the vendored `wwwroot/lib` copy |
 | 14 | The application called `MigrateAsync()` but no migrations are committed, so a fresh database could not start | Reading start-up code | Centralised `DatabaseSchemaInitializer`: migrations when present, model-created schema in non-production only, hard failure in production |
 | 15 | Eleven inline `<script>` blocks blocked any meaningful CSP | CSP review | Moved to `booking.js`, `invoice.js`, `flash-dismiss.js`; `script-src` tightened to `'self'`; six dead legacy blocks removed |
+| 16 | The patient chart assembled a patient's invoices by matching the **surname substring** against the global invoice list, so two patients sharing a surname would see each other's financial records — and any patient with a unique surname saw an empty list past the first page | Reading `PatientsController.Details` while documenting it | Added `IBillingService.ForPatientAsync(string patientId, …)` filtering on the foreign key; added `NoView_ScopesPatientDataByDisplayName` as a static guard |
 
 The grant matrix in `user-roles-permissions.md` is now machine-checked against `RolePermissions.cs`
 (384 cells, 0 mismatches) rather than maintained by hand.
@@ -132,7 +133,7 @@ The grant matrix in `user-roles-permissions.md` is now machine-checked against `
 |---|---|
 | Pipeline | `.github/workflows/ci.yml` → job `build-and-test` |
 | Steps executed | Restore → Build (Release) → Test → migrations artifact |
-| Result | **All 58 tests pass; build succeeds** |
+| Result | **All 59 tests pass; build succeeds** |
 | Commit | `5635b78` verified green. The tree has advanced since with documentation, security hardening and schema-initialisation changes; the latest green run is recorded in the final report. |
 
 To reproduce the exact status of any commit:

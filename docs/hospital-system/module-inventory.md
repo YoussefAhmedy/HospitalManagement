@@ -257,7 +257,7 @@ Legend: **Done** · **Partial** · **Documented gap**
 
 | Capability | Status | Evidence |
 |---|---|---|
-| 58 unit tests over eight suites | Done | `Hospital.Tests`, `test-plan.md` |
+| 59 unit tests over eight suites | Done | `Hospital.Tests`, `test-plan.md` |
 | Static view-hygiene tests (CSP, tokens, encoding) | Done | `ViewHygieneTests` |
 | CI annotation of failing tests | Done | `.github/workflows/ci.yml` |
 | EF model validation test | Documented gap | Requires design-time model build; deferred |

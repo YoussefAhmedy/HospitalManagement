@@ -23,7 +23,7 @@ section states the exact run of record.
 | Permissions enforced as policies | 0 | 44 |
 | Domain entities | 8 | 36 |
 | Reports | 0 | 18 |
-| Automated tests | 5 | 58 |
+| Automated tests | 5 | 59 |
 | Documentation | 3 files | 16 documents |
 
 The result is a hospital platform where a receptionist books a slot a clinician cannot be
@@ -168,14 +168,15 @@ file storage, and an isolation test suite. Full reasoning in
 | `LabAndBillingRulesTests` | 12 | pass |
 | `EncounterAndPermissionTests` | 14 | pass |
 | `LocalisationTests` | 4 | pass |
-| `ViewHygieneTests` | 6 | pass |
+| `ViewHygieneTests` | 7 | pass |
 | `ResourceOwnershipTests` | 1 | pass |
-| **Total** | **58** | **pass** |
+| **Total** | **59** | **pass** |
 
-**Fifteen defects** were found and fixed by this loop, six of which would have caused silent
+**Sixteen defects** were found and fixed by this loop, six of which would have caused silent
 misbehaviour rather than a compile error — including every doctor lookup returning an empty
-identifier, dead client-side validation, and an application that could not start against a fresh
-database. They are listed with their detection method in `test-plan.md` §5.
+identifier, dead client-side validation, an application that could not start against a fresh
+database, and a patient chart that assembled a patient's invoices by matching their surname — which
+would have shown a namesake's financial record. They are listed with their detection method in `test-plan.md` §5.
 
 ### Not verified, and why
 

@@ -204,9 +204,17 @@ public sealed class BillingService(
             .Skip((Math.Max(page, 1) - 1) * pageSize)
             .Take(pageSize)
             .Select(i => new InvoiceListItem(
-                i.Id, i.Number, i.Patient!.Mrn ?? "—",
-                (i.Patient.FirstName + " " + i.Patient.LastName),
-                i.IssuedAtUtc, i.Status, i.Total, i.InsuranceCovered, i.Paid, i.Balance))
+                i.Id,
+                i.Number,
+                i.Patient!.Mrn ?? "—",
+                i.Patient.FirstName + " " + i.Patient.LastName,
+                i.IssuedAtUtc,
+                i.Status,
+                i.Lines.Sum(l => l.Quantity * l.UnitPrice),
+                i.InsuranceCoveredAmount,
+                i.Payments.Where(p => !p.IsRefund).Sum(p => p.Amount) - i.Payments.Where(p => p.IsRefund).Sum(p => p.Amount),
+                i.Lines.Sum(l => l.Quantity * l.UnitPrice) - i.InsuranceCoveredAmount
+                    - (i.Payments.Where(p => !p.IsRefund).Sum(p => p.Amount) - i.Payments.Where(p => p.IsRefund).Sum(p => p.Amount))))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<InvoiceListItem>(items, total, Math.Max(page, 1), pageSize);

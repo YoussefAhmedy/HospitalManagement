@@ -7,6 +7,24 @@ Identity role claims at start-up.
 
 ---
 
+## The catalogue at a glance
+
+**43 permissions**, of which **39 are enforced** by an authorisation attribute and **4 are
+reserved**:
+
+| Reserved permission | Why it exists | What it gates today |
+|---|---|---|
+| `patient.delete` | Records whether any role may destroy a patient record | Nothing. No delete path exists; retention is a legal decision. |
+| `patient.view.sensitive` | Names the redaction capability (HIV status, psychiatric history, protected identifiers) | Nothing. Redaction is backend work. |
+| `insurance.manage` | Names insurer, policy and pre-authorisation administration | Nothing. Only coverage values on an invoice are recorded. |
+| `settings.manage` | Names organisation-wide configuration | Nothing. Configuration is deployment-time. |
+
+Holding a reserved permission grants no access, and none of them is presented anywhere as a live
+control. `AuthorizationCoverageTests` fails if a fifth permission appears unenforced, and also fails
+if one of these four silently becomes enforced without this table being updated.
+
+---
+
 ## 1. Model
 
 | Concept | Implementation |

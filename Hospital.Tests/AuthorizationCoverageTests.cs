@@ -56,7 +56,7 @@ public sealed class AuthorizationCoverageTests
     };
 
     private sealed record ActionRecord(
-        string Controller,
+        string ControllerName,
         string File,
         string Name,
         bool OwnAuthorize,
@@ -116,7 +116,7 @@ public sealed class AuthorizationCoverageTests
                 var ownAuthorize = Regex.Match(attributes, @"\[Authorize(?:\((.*?)\))?\]", RegexOptions.Singleline);
 
                 results.Add(new ActionRecord(
-                    Controller,
+                    controller,
                     fileName,
                     match.Groups[1].Value,
                     ownAuthorize.Success,
@@ -156,7 +156,7 @@ public sealed class AuthorizationCoverageTests
         return string.Join(" ", collected);
     }
 
-    private static string Key(ActionRecord record) => $"{record.Controller}.{record.Name}";
+    private static string Key(ActionRecord record) => $"{record.ControllerName}.{record.Name}";
 
     [TestMethod]
     public void EveryAction_IsAuthorisedOrExplicitlyPublic()

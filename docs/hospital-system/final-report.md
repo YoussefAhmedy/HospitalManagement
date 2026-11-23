@@ -20,7 +20,7 @@ section states the exact run of record.
 | Razor views | 26 | 73 |
 | Action methods | ~40 | 120 |
 | Roles | 3 | 14 (11 operational + 3 legacy) |
-| Permissions enforced as policies | 0 | 44 |
+| Permissions in the catalogue | 0 | 43 (39 enforced, 4 reserved) |
 | Domain entities | 8 | 36 |
 | Reports | 0 | 18 |
 | Automated tests | 5 | 59 |
@@ -100,7 +100,7 @@ no page-local colour, English and Arabic with genuine RTL via logical properties
 ### 3.1 Fully implemented — production-quality code against a real database
 
 Account security (registration, confirmation, lockout, reset, optional OAuth), permission-claim
-authorisation across 44 policies, role-routed dashboards, the patient module, scheduling, encounters,
+authorisation across 43 policies, role-routed dashboards, the patient module, scheduling, encounters,
 laboratory, radiology, pharmacy, admissions, billing, reporting, audit, bilingual UI, design system,
 and schema generation. §2 above describes each; `module-inventory.md` maps every row to its evidence.
 
@@ -203,7 +203,7 @@ of raw HTML injection outside one controlled icon catalogue, and the absence of 
 | `module-inventory.md` | Original state → decision → delivered state, per capability |
 | `technical-architecture.md` | As-is and target architecture |
 | `improvement-roadmap.md` | Ten phases and their gates |
-| `user-roles-permissions.md` | 14 roles, 44 permissions, grant matrix (machine-verified) |
+| `user-roles-permissions.md` | 14 roles, 43 permissions, grant matrix (machine-verified) |
 | `workflow-mapping.md` | Every workflow's state machine and its guards |
 | `design-system.md` | Tokens, components, breakpoints, RTL, accessibility intent |
 | `data-architecture.md` | Entities, database invariants, lifecycle, concurrency, classification |

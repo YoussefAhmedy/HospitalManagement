@@ -138,7 +138,7 @@ Legend: **Done** · **Partial** · **Documented gap**
 | Optional Google OAuth | Done (unverified against a live tenant) | `Program.cs` |
 | Admin bootstrap, no default admin | Done | `Program.BootstrapAdminAsync` |
 | 14 roles | Done | `Hospital.BLL/Helpers/Role.cs` |
-| 44 permissions, policy-enforced | Done | `Permission.cs`, `RolePermissions.cs`, `Program.cs` |
+| 43 permissions, policy-enforced | Done | `Permission.cs`, `RolePermissions.cs`, `Program.cs` |
 | Least-privilege grant matrix, machine-verified | Done | `user-roles-permissions.md`, 384-cell comparison |
 | Segregation of duties (prescribe/dispense, author/audit, record/approve refund) | Done | `EncounterAndPermissionTests`, `BillingService.ApproveRefundAsync` |
 | Audit trail, append-only, metadata only | Done | `AuditLog`, `AuditLogger`, `AuditController` |

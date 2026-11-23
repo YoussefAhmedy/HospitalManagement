@@ -19,7 +19,7 @@ tenancy, and regulatory review rather than by application features.
 | Razor views | 26 | 73 |
 | Action methods | ~40 | 120 |
 | Roles | 3 | 14 (11 operational + 3 legacy) |
-| Permissions | 0 (role strings) | 44, enforced as policies |
+| Permissions | 0 (role strings) | 43, enforced as policies |
 | Domain entities | 8 | 36 entity classes |
 | Reports | 0 | 18 |
 | Automated tests | 5 | 59 |
@@ -35,7 +35,7 @@ tenancy, and regulatory review rather than by application features.
 | Capability | Evidence |
 |---|---|
 | Authentication, registration, reset, lockout, optional OAuth | `AccountController`, Identity configuration |
-| Permission-claim authorisation with 44 policies | `Permission`, `RolePermissions`, `Program.cs` |
+| Permission-claim authorisation with 43 policies | `Permission`, `RolePermissions`, `Program.cs` |
 | Role-routed dashboards for eleven operational roles | `DashboardController` + three workspaces |
 | Patient directory, search, paging, registration with duplicate guard | `PatientsController`, `PatientLookupService` |
 | Consolidated patient chart (identity, allergies, encounters, labs, invoices) | `Patients/Details` |

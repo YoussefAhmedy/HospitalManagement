@@ -18,7 +18,7 @@ model enforced on every request.
 |---|---|
 | **Stack** | .NET 10 · ASP.NET Core MVC · C# 14 · EF Core 10 (SQL Server) · Identity · Hangfire |
 | **Roles** | 14 (11 operational + 3 legacy), each with a least-privilege permission grant |
-| **Permissions** | 44, enforced as authorisation policies on every action |
+| **Permissions** | 43, enforced as authorisation policies on every action |
 | **Modules** | Patients · Appointments · Encounters · Laboratory · Radiology · Pharmacy · Admissions & beds · Billing · Reports · Audit |
 | **Reports** | 18, all backed by live queries, with paging, CSV export and print |
 | **Languages** | English (LTR) and Arabic (RTL), switchable at runtime |
@@ -103,7 +103,7 @@ All in [`docs/hospital-system/`](docs/hospital-system):
 | `module-inventory.md` | Every capability: original state, decision, **delivered state** |
 | `technical-architecture.md` | As-is and target architecture |
 | `improvement-roadmap.md` | The ten phases and their gates |
-| `user-roles-permissions.md` | Roles, 44 permissions, verified grant matrix, segregation of duties |
+| `user-roles-permissions.md` | Roles, 43 permissions, verified grant matrix, segregation of duties |
 | `workflow-mapping.md` | Every clinical and financial workflow with its state machine |
 | `design-system.md` | Tokens, components, breakpoints, RTL, accessibility intent |
 | `data-architecture.md` | Entities, invariants, lifecycle, concurrency, classification |

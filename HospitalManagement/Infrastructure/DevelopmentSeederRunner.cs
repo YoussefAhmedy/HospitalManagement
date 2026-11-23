@@ -23,8 +23,7 @@ public static class DevelopmentSeederRunner
 
         if (configuration.GetValue("Database:AutoMigrate", true))
         {
-            await dbContext.Database.MigrateAsync();
-            logger.LogInformation("Database migrations applied for {Environment}.", environment.EnvironmentName);
+            await DatabaseSchemaInitializer.InitialiseAsync(dbContext, environment, configuration, logger);
         }
 
         if (environment.EnvironmentName is "Performance" ||

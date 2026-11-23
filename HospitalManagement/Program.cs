@@ -281,7 +281,11 @@ public class Program
         {
             using (var bootstrapScope = app.Services.CreateScope())
             {
-                await bootstrapScope.ServiceProvider.GetRequiredService<HospitalDbContext>().Database.MigrateAsync();
+                await DatabaseSchemaInitializer.InitialiseAsync(
+                    bootstrapScope.ServiceProvider.GetRequiredService<HospitalDbContext>(),
+                    app.Environment,
+                    builder.Configuration,
+                    app.Logger);
             }
 
             await BootstrapAdminAsync(app.Services, builder.Configuration);

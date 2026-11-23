@@ -18,7 +18,7 @@ section states the exact run of record.
 | Files changed | — | 210 (+16,900 / −4,805) |
 | Controllers | 5 | 16 (11 new) |
 | Razor views | 26 | 73 |
-| Action methods | ~40 | 119 |
+| Action methods | ~40 | 120 |
 | Roles | 3 | 14 (11 operational + 3 legacy) |
 | Permissions enforced as policies | 0 | 44 |
 | Domain entities | 8 | 36 |

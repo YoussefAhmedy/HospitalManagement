@@ -3,6 +3,14 @@ namespace Hospital.BLL.Permissions;
 /// <summary>
 /// Fine-grained capability catalogue. Roles are granted sets of permissions; controllers
 /// authorise on policies built from these names, never on raw role strings for new code.
+/// <para>
+/// The catalogue contains 43 permissions. Four of them — <see cref="PatientDelete"/>,
+/// <see cref="PatientViewSensitive"/>, <see cref="InsuranceManage"/> and
+/// <see cref="SettingsManage"/> — are <em>reserved</em>: they describe intended capability and are
+/// listed in the grant matrix, but no authorisation attribute references them, so holding one
+/// grants nothing today. That distinction is asserted by <c>AuthorizationCoverageTests</c> so the
+/// number cannot drift unnoticed.
+/// </para>
 /// </summary>
 public static class Permission
 {
@@ -10,6 +18,11 @@ public static class Permission
     public const string PatientView = "patient.view";
     public const string PatientCreate = "patient.create";
     public const string PatientEdit = "patient.edit";
+
+    // Reserved. Both are defined so the grant matrix and the documentation can name the intended
+    // capability, but neither is enforced by any authorisation attribute yet: patient records are
+    // not deletable (retention is a legal decision, not a UI one) and sensitive-field redaction is
+    // backend work. A permission that gates nothing must never be presented as a control.
     public const string PatientDelete = "patient.delete";
     public const string PatientViewSensitive = "patient.view.sensitive";
 
@@ -55,6 +68,7 @@ public static class Permission
     public const string BillingView = "billing.view";
     public const string BillingManage = "billing.manage";
     public const string BillingRefund = "billing.refund";
+    /// <summary>Reserved: no endpoint is gated on this yet. See the note above.</summary>
     public const string InsuranceManage = "insurance.manage";
 
     // Administration and reporting
@@ -63,6 +77,7 @@ public static class Permission
     public const string ReportExport = "report.export";
     public const string AuditView = "audit.view";
     public const string UserManage = "user.manage";
+    /// <summary>Reserved: no endpoint is gated on this yet. See the note above.</summary>
     public const string SettingsManage = "settings.manage";
 
     public const string PolicyPrefix = "perm:";

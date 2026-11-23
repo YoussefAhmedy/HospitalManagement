@@ -16,8 +16,8 @@ tenancy, and regulatory review rather than by application features.
 | Measure | Before | After |
 |---|---|---|
 | Controllers | 5 | 16 |
-| Razor views | 26 | 72 |
-| Action methods | ~40 | 119 |
+| Razor views | 26 | 73 |
+| Action methods | ~40 | 120 |
 | Roles | 3 | 14 (11 operational + 3 legacy) |
 | Permissions | 0 (role strings) | 44, enforced as policies |
 | Domain entities | 8 | 36 entity classes |

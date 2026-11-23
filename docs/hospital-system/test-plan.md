@@ -29,7 +29,7 @@ that the invariants that matter are testable without a database.
         ├───────────────────────────────────────────────┤
         │  Not executed: repository integration tests   │  ← needs SQL Server
         ├───────────────────────────────────────────────┤
-        │  Executed: 51 pure-unit tests, 153 assertions │  ← runs on every push
+        │  Executed: 58 pure-unit tests, 190+ assertions │  ← runs on every push
         └───────────────────────────────────────────────┘
 ```
 
@@ -57,7 +57,8 @@ test boundary there gives high defect detection per test and no infrastructure c
 | `EncounterAndPermissionTests` | 14 | Encounter transition graph, signed-record immutability, sign preconditions, note edit permission, five role-boundary assertions, permission catalogue integrity, query normalisation and paging route preservation |
 | `LocalisationTests` | 4 | Every key translated to Arabic, unknown-key fallback, RTL detection, regional-culture resolution |
 | `ResourceOwnershipTests` | 1 | Ownership predicate rejects null/whitespace/mismatched ids |
-| **Total** | **51** | |
+| `ViewHygieneTests` | 6 | No inline script, no inline event handlers, no hard-coded colours, no unencoded HTML outside the icon catalogue, no duplicate `Scripts` section, no reference to the retired layout partials |
+| **Total** | **58** | |
 
 ### Positive and negative coverage of the brief's named scenarios
 
@@ -116,6 +117,9 @@ having the loop.
 | 10 | Nurse role lacked `report.view` while the shell navigation offered the link | Scripted grant-matrix comparison against `RolePermissions.cs` | Granted; matrix now verified cell-by-cell |
 | 11 | Legacy views declared a `Header` section rendering a deleted partial | Markup inventory | Removed 17 dead sections |
 | 12 | One inline `#003366` remained in a legacy table, bypassing the design system | Token lint | Replaced with component classes |
+| 13 | Client-side validation loaded jQuery **validation** but never jQuery itself, so unobtrusive validation was silently dead | Inspecting the CSP work | Partial now loads jQuery from the vendored `wwwroot/lib` copy |
+| 14 | The application called `MigrateAsync()` but no migrations are committed, so a fresh database could not start | Reading start-up code | Centralised `DatabaseSchemaInitializer`: migrations when present, model-created schema in non-production only, hard failure in production |
+| 15 | Eleven inline `<script>` blocks blocked any meaningful CSP | CSP review | Moved to `booking.js`, `invoice.js`, `flash-dismiss.js`; `script-src` tightened to `'self'`; six dead legacy blocks removed |
 
 The grant matrix in `user-roles-permissions.md` is now machine-checked against `RolePermissions.cs`
 (384 cells, 0 mismatches) rather than maintained by hand.
@@ -128,8 +132,8 @@ The grant matrix in `user-roles-permissions.md` is now machine-checked against `
 |---|---|
 | Pipeline | `.github/workflows/ci.yml` → job `build-and-test` |
 | Steps executed | Restore → Build (Release) → Test → migrations artifact |
-| Result | **All 51 tests pass; build succeeds** |
-| Commit | `5e96a2d` (the run that verified the final tree of this phase). Earlier green runs: `1bc8ba9`, `3793975`. |
+| Result | **All 58 tests pass; build succeeds** |
+| Commit | `5635b78` verified green. The tree has advanced since with documentation, security hardening and schema-initialisation changes; the latest green run is recorded in the final report. |
 
 To reproduce the exact status of any commit:
 
@@ -146,6 +150,14 @@ assertion message, so a red build is diagnosable from the API without downloadin
 ---
 
 ## 7. Not run — and what would be required
+
+### Static analysis executed instead of runtime browser checks
+
+Because no browser is available, the properties that a browser test would cover for the security
+posture are asserted statically over the Razor sources by `ViewHygieneTests`: absence of inline
+script and inline handlers (which is what makes `script-src 'self'` meaningful), absence of raw
+HTML injection outside the one controlled icon catalogue, and absence of hard-coded colours. These
+run on every push.
 
 | Area | Status | Requirement to run it |
 |---|---|---|

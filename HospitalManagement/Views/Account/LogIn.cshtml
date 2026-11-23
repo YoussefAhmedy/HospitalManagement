@@ -41,6 +41,10 @@
         <a class="button w-100" asp-controller="Account" asp-action="GoogleAuth" asp-route-returnUrl="@Model.ReturnUrl">Continue with Google</a>
     }
 
+    <p class="form-hint" style="margin-top:var(--space-4)">
+        Evaluating this system? <a asp-controller="Home" asp-action="Demo">See the demonstration accounts</a>.
+    </p>
+
     <div class="auth-card__footer">
         <a asp-controller="Account" asp-action="ForgetPassword">Forgot your password?</a>
         <span>New here? <a asp-controller="Account" asp-action="Register">Create an account</a></span>

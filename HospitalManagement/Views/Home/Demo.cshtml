@@ -1,0 +1,68 @@
+@{
+    ViewData["Title"] = "Demonstration access";
+    ViewData["Description"] = "Synthetic demonstration accounts for evaluating the CareAxis hospital platform.";
+    var accounts = new (string Handle, string Role, string Workspace)[]
+    {
+        ("admin", "Hospital administrator", "Operations dashboard, reports, audit"),
+        ("reception", "Receptionist", "Booking, check-in, registration"),
+        ("nurse", "Nurse", "Triage queue, vitals, specimen collection"),
+        ("sara.hassan", "Doctor", "Clinical dashboard, encounters"),
+        ("lab", "Laboratory technician", "Specimen-to-release worklist"),
+        ("pharmacy", "Pharmacist", "Prescription review and dispensing"),
+        ("billing", "Billing officer", "Invoices, payments, refunds"),
+        ("records", "Medical records officer", "Patient directory"),
+        ("management", "Management", "Reporting only"),
+        ("auditor", "Auditor", "Append-only audit trail")
+    };
+}
+
+<section class="auth-card auth-card--wide" aria-labelledby="demo-heading">
+    <span class="eyebrow">Synthetic environment</span>
+    <h1 id="demo-heading">Demonstration access</h1>
+    <p class="auth-card__lead">
+        This deployment contains <strong>synthetic demonstration data only</strong>. There are no real
+        patients, no real clinicians and no real financial transactions. Every seeded account uses an
+        <code>@@example.invalid</code> address.
+    </p>
+
+    <div class="notice notice--warning" style="margin-bottom:var(--space-5)">
+        <partial name="_Icon" model="@("alert")" />
+        <div>
+            <div class="notice__title">Do not enter real patient information</div>
+            These credentials are published and shared. Any data entered here is not protected and must be
+            treated as public.
+        </div>
+    </div>
+
+    <table class="table table--compact">
+        <caption class="visually-hidden">Demonstration accounts by role</caption>
+        <thead>
+            <tr>
+                <th scope="col">Sign in as</th>
+                <th scope="col">Email</th>
+                <th scope="col">What you will see</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var account in accounts)
+            {
+                <tr>
+                    <td class="strong">@account.Role</td>
+                    <td class="mono">@account.Handle@@example.invalid</td>
+                    <td class="muted">@account.Workspace</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <p class="field__hint" style="margin-top:var(--space-4)">
+        The demonstration password is published in the deployment notes for this environment. It is set
+        only by the demo seeder and is never used for a real account. Accounts are created only when
+        demo seeding is enabled by the operator.
+    </p>
+
+    <div class="auth-card__footer" style="display:flex;gap:var(--space-3);justify-content:space-between;align-items:center">
+        <span>Sign in with any account above.</span>
+        <a class="btn btn--primary" asp-controller="Account" asp-action="LogIn">Go to sign in</a>
+    </div>
+</section>

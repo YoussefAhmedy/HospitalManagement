@@ -38,6 +38,15 @@ public sealed class HomeController : Controller
     [HttpGet]
     public IActionResult Privacy() => View();
 
+    /// <summary>
+    /// Sign-in guide for a demonstration deployment. Deliberately public: the accounts it lists
+    /// are synthetic, share one published password, and exist only when demo seeding is enabled.
+    /// Hosted environments that hold real data must leave <c>Demo:Seed</c> disabled, in which case
+    /// these accounts do not exist.
+    /// </summary>
+    [HttpGet]
+    public IActionResult Demo() => View();
+
     [HttpGet]
     public IActionResult Terms() => View();
 

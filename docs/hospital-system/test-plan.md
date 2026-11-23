@@ -29,7 +29,7 @@ that the invariants that matter are testable without a database.
         ├───────────────────────────────────────────────┤
         │  Not executed: repository integration tests   │  ← needs SQL Server
         ├───────────────────────────────────────────────┤
-        │  Executed: 59 pure-unit tests, 190+ assertions │  ← runs on every push
+        │  Executed: 69 pure-unit tests, 190+ assertions │  ← runs on every push
         └───────────────────────────────────────────────┘
 ```
 
@@ -133,7 +133,7 @@ The grant matrix in `user-roles-permissions.md` is now machine-checked against `
 |---|---|
 | Pipeline | `.github/workflows/ci.yml` → job `build-and-test` |
 | Steps executed | Restore → Build (Release) → Test → migrations artifact |
-| Result | **All 59 tests pass; build succeeds** |
+| Result | **All 69 tests pass; build succeeds** |
 | Commit | `5635b78` verified green. The tree has advanced since with documentation, security hardening and schema-initialisation changes; the latest green run is recorded in the final report. |
 
 To reproduce the exact status of any commit:

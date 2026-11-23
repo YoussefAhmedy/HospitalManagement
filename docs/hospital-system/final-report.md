@@ -23,7 +23,7 @@ section states the exact run of record.
 | Permissions in the catalogue | 0 | 43 (39 enforced, 4 reserved) |
 | Domain entities | 8 | 36 |
 | Reports | 0 | 18 |
-| Automated tests | 5 | 59 |
+| Automated tests | 5 | 69 |
 | Documentation | 3 files | 16 documents |
 
 The result is a hospital platform where a receptionist books a slot a clinician cannot be
@@ -169,8 +169,9 @@ file storage, and an isolation test suite. Full reasoning in
 | `EncounterAndPermissionTests` | 14 | pass |
 | `LocalisationTests` | 4 | pass |
 | `ViewHygieneTests` | 7 | pass |
+| `AuthorizationCoverageTests` | 10 | pass |
 | `ResourceOwnershipTests` | 1 | pass |
-| **Total** | **59** | **pass** |
+| **Total** | **69** | **pass** |
 
 **Sixteen defects** were found and fixed by this loop, six of which would have caused silent
 misbehaviour rather than a compile error — including every doctor lookup returning an empty

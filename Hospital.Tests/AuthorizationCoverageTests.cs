@@ -233,6 +233,15 @@ public sealed class AuthorizationCoverageTests
     /// that promise: if one of them starts being enforced, this list must shrink; if a fifth one
     /// appears, the test fails.
     /// </summary>
+    /// <summary>
+    /// Constants on <see cref="Permission"/> that are mechanism, not capability: the policy-name
+    /// prefix and any future helper values. Excluded from every count and coverage assertion.
+    /// </summary>
+    private static readonly HashSet<string> NotPermissions = new(StringComparer.Ordinal)
+    {
+        nameof(Permission.PolicyPrefix)
+    };
+
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
         nameof(Permission.PatientDelete),
@@ -263,6 +272,7 @@ public sealed class AuthorizationCoverageTests
             .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             .Where(f => f.IsLiteral && f.FieldType == typeof(string))
             .Select(f => (Name: f.Name, Value: (string)f.GetRawConstantValue()!))
+            .Where(c => !NotPermissions.Contains(c.Name))
             .ToList();
 
         Assert.IsTrue(constants.Count > 0, "No permission constants were found via reflection.");
@@ -309,7 +319,7 @@ public sealed class AuthorizationCoverageTests
         // cannot disagree silently.
         var count = typeof(Permission)
             .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-            .Count(f => f.IsLiteral && f.FieldType == typeof(string));
+            .Count(f => f.IsLiteral && f.FieldType == typeof(string) && !NotPermissions.Contains(f.Name));
 
         Assert.AreEqual(43, count,
             "The permission catalogue changed. Update this number and every document that states it.");
@@ -323,6 +333,7 @@ public sealed class AuthorizationCoverageTests
         var constants = typeof(Permission)
             .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+            .Where(f => !NotPermissions.Contains(f.Name))
             .Select(f => (string)f.GetRawConstantValue()!)
             .ToHashSet(StringComparer.Ordinal);
 
@@ -344,6 +355,7 @@ public sealed class AuthorizationCoverageTests
         var duplicates = typeof(Permission)
             .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+            .Where(f => !NotPermissions.Contains(f.Name))
             .Select(f => (string)f.GetRawConstantValue()!)
             .GroupBy(v => v, StringComparer.Ordinal)
             .Where(g => g.Count() > 1)

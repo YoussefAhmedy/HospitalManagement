@@ -22,7 +22,7 @@ tenancy, and regulatory review rather than by application features.
 | Permissions | 0 (role strings) | 43, enforced as policies |
 | Domain entities | 8 | 36 entity classes |
 | Reports | 0 | 18 |
-| Automated tests | 5 | 59 |
+| Automated tests | 5 | 69 |
 | Design system | ad-hoc CSS | token-based system + RTL |
 | Audit events | ad-hoc | 30+ named event types |
 

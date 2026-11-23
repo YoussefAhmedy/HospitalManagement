@@ -9,6 +9,7 @@ using Hospital.DAL.Entities.Operations;
 using Hospital.DAL.Entities.Organization;
 using Hospital.DAL.Entities.Pharmacy;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 
 namespace Hospital.BLL.Services.Seeding;

@@ -50,7 +50,9 @@ record release. ASVS V3.3 recommends step-up for high-value actions.
 |---|---|
 | Model | Permission claims → policies, enforced per action |
 | Least privilege | `RolePermissions` grant map; verified cell-by-cell by script (384 cells, 0 mismatches) |
-| Default deny | New controllers carry an explicit `[Authorize(Policy = …)]` |
+| Default deny | Every clinical and administrative controller carries a controller-level `[Authorize(Policy = …)]`; the only actions without a policy are the 8 public pages of `Home` and the 13 anonymous `Account` authentication/error endpoints, all listed in one reviewed constant in `AuthorizationCoverageTests`. A new action on a `Home`-style controller with no attribute fails a test rather than going live. |
+| No accidental full-controller bypass | A test asserts no controller carries both `[AllowAnonymous]` and `[Authorize]`, a combination in which ASP.NET Core silently ignores the policy |
+| Policy names are not strings | Every attribute references a `Permission` constant, so a rename cannot silently disable a gate |
 | Segregation of duties | Receipt vs approval, prescribing vs dispensing, authoring vs auditing |
 | Portal ownership | `ResourceOwnership.IsOwner`, unit-tested against null/whitespace |
 | Hidden UI is not access control | Every gated POST is also gated server-side |

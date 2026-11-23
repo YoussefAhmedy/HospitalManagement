@@ -122,7 +122,8 @@ data; the application never generates findings, results, prescriptions or paymen
 5. Retention, erasure and subject-access workflows.
 6. Optimistic concurrency (`RowVersion`) on clinical records.
 7. Sensitive-field redaction (`patient.view.sensitive` is defined but unenforced).
-8. An authz matrix test that hits every action as every role.
+8. An authz **matrix** test that hits every action as every role. (A static audit of every action's
+   attributes now exists and is green; what remains is the request-level version.)
 9. Server-side PDF and XLSX generation.
 10. Scheduled report delivery.
 11. Session/device management.

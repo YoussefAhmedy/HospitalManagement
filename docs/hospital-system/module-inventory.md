@@ -11,7 +11,7 @@ Each row states *verified evidence*, the *target state*, and the *decision* for 
 | Password reset, resend confirmation, email change | ✅ | `AccountController` | Keep | Preserve |
 | Optional Google OAuth | ✅ | `Program.cs` | Keep | Preserve, document |
 | Admin bootstrap command, no default admin | ✅ | `Program.BootstrapAdminAsync` | Keep | Preserve |
-| Roles | ◐ | `Role` enum: Admin, Patient, Doctor | 12 operational roles | **Extend enum + policy catalogue** |
+| Roles | ◐ | `Role` enum: Admin, Patient, Doctor | 12 operational roles | **Extend enum + policy catalogue** → delivered as 14 (11 operational + 3 legacy) |
 | Permission model | ✗ | Role-string attributes only | Claim/policy based, least privilege | **Add `Permissions` + policy registration** |
 | Audit trail | ✅ | `AuditLog`, `AuditLogger` | Extend to all sensitive actions | Extend event catalogue |
 | Session security, CSP, antiforgery, rate limits | ✅ | `Program.cs` | Keep and document | Preserve |

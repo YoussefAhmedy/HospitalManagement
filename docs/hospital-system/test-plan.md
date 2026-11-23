@@ -53,12 +53,33 @@ test boundary there gives high defect detection per test and no infrastructure c
 | `AppointmentRulesTests` | 4 | Bookable dates, daily capacity, weekday matching, status validity |
 | `SlotRulesTests` | 8 | Slot generation, overlap detection, slot occupancy per status, check-in window, no-show window, cancellation eligibility |
 | `BedRulesTests` | 9 | Occupancy with history, per-bed counting, occupancy rate rounding, inactive beds excluded, admission transitions, bed-assignment eligibility |
-| `LabAndBillingRulesTests` | 11 | Laboratory transition graph, no-skip verification, terminal states, clinical-finality, reference-range classification, balance arithmetic, overpayment rejection, refund threshold, insurance clamping, invoice status derivation |
+| `LabAndBillingRulesTests` | 12 | Laboratory transition graph, no-skip verification, terminal states, clinical-finality, reference-range classification, balance arithmetic, overpayment rejection, refund threshold, insurance clamping, invoice status derivation |
 | `EncounterAndPermissionTests` | 14 | Encounter transition graph, signed-record immutability, sign preconditions, note edit permission, five role-boundary assertions, permission catalogue integrity, query normalisation and paging route preservation |
 | `LocalisationTests` | 4 | Every key translated to Arabic, unknown-key fallback, RTL detection, regional-culture resolution |
 | `ResourceOwnershipTests` | 1 | Ownership predicate rejects null/whitespace/mismatched ids |
 | `ViewHygieneTests` | 7 | No inline script, no inline event handlers, no hard-coded colours, no unencoded HTML outside the icon catalogue, no duplicate `Scripts` section, no reference to the retired layout partials, no patient data scoped by display name |
-| **Total** | **58** | |
+| `AuthorizationCoverageTests` | 10 | Every one of the 120 actions is authorised or on a reviewed public list; no controller mixes `[AllowAnonymous]` with `[Authorize]`; no action is both; every policy is built from a `Permission` constant; the catalogue is exactly 43 permissions, matches `Permission.All`, has no duplicate values, and only the four declared reserved permissions are unenforced |
+| **Total** | **69** | |
+
+### What the authorisation audit does and does not prove
+
+`AuthorizationCoverageTests` is a **static** audit. It reads the controller sources and asserts the
+shape of the authorisation attributes. It therefore proves:
+
+- no action is reachable without authentication unless a human added it to a reviewed list;
+- the `[AllowAnonymous]` + `[Authorize]` combination that silently disables a controller's policy
+  never occurs;
+- no policy name is written as a literal string, so a renamed permission cannot silently produce an
+  always-failing (or, via a typo'd custom policy, always-passing) gate;
+- the four unenforced permissions are exactly the four that the documentation calls reserved.
+
+It does **not** prove that the *right* permission is on each action — a developer could still put
+`patient.view` on a delete endpoint. That requires a request-level matrix test (sign in as each of
+the tested roles, call every action, assert the status code), which needs a host and a database and
+is specified in §7 as outstanding work. The static audit closes the failure modes that occur by
+accident; the matrix test would close the ones that occur by mistake.
+
+---
 
 ### Positive and negative coverage of the brief's named scenarios
 

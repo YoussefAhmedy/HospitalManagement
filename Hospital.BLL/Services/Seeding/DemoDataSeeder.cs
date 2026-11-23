@@ -17,12 +17,22 @@ namespace Hospital.BLL.Services.Seeding;
 /// Idempotent synthetic dataset for demonstration and evaluation. Accounts use synthetic
 /// addresses and placeholder credentials that are printed once to the operator; no value
 /// here is a secret and every patient row is flagged <c>IsSynthetic</c>.
+/// <para>
+/// The demonstration password is a published constant by design: these accounts exist to be
+/// shared with evaluators, and pretending otherwise would be worse than saying so. An operator
+/// may override it with <c>Demo:Password</c>, and the seeder refuses to run at all unless demo
+/// seeding is explicitly enabled outside Development.
+/// </para>
 /// </summary>
 public sealed class DemoDataSeeder(
     HospitalDbContext dbContext,
-    UserManager<ApplicationUser> userManager) : IDemoDataSeeder
+    UserManager<ApplicationUser> userManager,
+    IConfiguration configuration) : IDemoDataSeeder
 {
-    public const string DemoPassword = "Careaxis-Demo-2026!";
+    public const string DefaultDemoPassword = "Careaxis-Demo-2026!";
+
+    private string DemoPassword =>
+        configuration["Demo:Password"] is { Length: > 0 } configured ? configured : DefaultDemoPassword;
 
     public async Task<string> SeedAsync(CancellationToken cancellationToken = default)
     {

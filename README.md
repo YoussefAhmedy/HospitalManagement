@@ -1,136 +1,142 @@
-# CareAxis — healthcare workflow demonstration
+# CareAxis — hospital management platform
 
-CareAxis is a role-based ASP.NET Core MVC demonstration for patient appointment requests, clinician review, and scoped medical-record workflows. It preserves the existing domain model while modernizing account handling, persistence, security controls, and the shared UI.
+A role-based hospital information system built on ASP.NET Core MVC: patient records, scheduling,
+clinical encounters, laboratory, radiology, pharmacy, admissions and beds, billing with insurance,
+parameterised reporting, and an append-only audit trail — in English and Arabic, with a permission
+model enforced on every request.
 
-> **Use synthetic data only.** This repository is not a clinical service, emergency channel, medical-advice system, or a claim of HIPAA, GDPR, or other legal compliance. Do not deploy it with real patient data until the organization has completed the required privacy, legal, security, clinical, and operational review.
+> **Synthetic data only.** This repository is a working platform, not a certified medical device. It
+> has **not** been assessed for HIPAA, GDPR or any other regulatory regime, and no such claim is made.
+> Read `docs/hospital-system/commercial-readiness-assessment.md` before considering any deployment
+> involving real patients.
 
-## Stack
+---
 
-- .NET 10 / ASP.NET Core 10 / C# 14 (`global.json`, `Directory.Build.props`)
-- EF Core 10 and SQL Server
-- ASP.NET Core Identity for accounts and role checks
-- Hangfire SQL Server storage for background transactional-email jobs
-- MailKit SMTP delivery (disabled unless configured)
-- MSTest domain-rule tests in `Hospital.Tests`
+## What this is
 
-Microsoft package versions are centrally pinned in `Directory.Packages.props`. The EF design-time tool is pinned in `.config/dotnet-tools.json`.
+| | |
+|---|---|
+| **Stack** | .NET 10 · ASP.NET Core MVC · C# 14 · EF Core 10 (SQL Server) · Identity · Hangfire |
+| **Roles** | 14 (11 operational + 3 legacy), each with a least-privilege permission grant |
+| **Permissions** | 44, enforced as authorisation policies on every action |
+| **Modules** | Patients · Appointments · Encounters · Laboratory · Radiology · Pharmacy · Admissions & beds · Billing · Reports · Audit |
+| **Reports** | 18, all backed by live queries, with paging, CSV export and print |
+| **Languages** | English (LTR) and Arabic (RTL), switchable at runtime |
+| **Tests** | 58 unit tests across eight suites, run on every push |
 
-## Included workflows
+## Try it
 
-- Patient self-registration, email confirmation, sign-in/lockout, password recovery, profile updates, and verified email changes.
-- Optional Google sign-in when OAuth client credentials are provided.
-- A one-time, out-of-band administrator bootstrap command; there is no default admin account or checked-in password.
-- Clinician account creation by an administrator, with email verification required before sign-in.
-- Patient appointment requests against an assigned clinician schedule, a per-clinician daily capacity, patient cancellation, and clinician approval/decline.
-- Patient and clinician record queries scoped to the authenticated account; clinician record creation requires an approved appointment relationship.
-- Minimal audit metadata for selected account, appointment, and medical-record operations. Clinical note text and credentials are not written to the audit table.
-- Local profile-image uploads validated by extension, size, and signature, stored outside `wwwroot`, and served through an authenticated endpoint.
+1. Start the app (see *Running locally*). Demo data is seeded automatically in non-production
+   environments when `Demo:Seed` is enabled.
+2. Open **`/Home/Demo`** — or click **Demo access** on the sign-in page — for the list of synthetic
+   accounts and the role each one demonstrates.
+3. Sign in as `admin` to see the operations dashboard, then as `lab`, `pharmacy`, `billing` and
+   `auditor` to see how drastically the available actions change with the role.
 
-Dates in the legacy appointment domain are clinic-local calendar dates. Configure and document the clinic time zone before using the workflow in any real deployment; this application does not currently provide a time-zone management feature.
+The demo password is a **published constant** — `Careaxis-Demo-2026!` — and is printed to the
+application log on first seed. It is published deliberately: these accounts exist to be shared with
+evaluators, and treating the value as a secret while committing it to source would be dishonest. An
+operator may override it with `Demo:Password`. It must never be used for a real account, and demo
+seeding should be left disabled on any deployment that will hold real data.
 
-## Requirements
+## Running locally
 
-- .NET SDK 10.0.100 or a compatible later .NET 10 feature band (as selected by `global.json`)
-- A reachable SQL Server database
-- NuGet access for restore
+Requirements: .NET SDK 10.0.100+ and a reachable SQL Server instance.
 
-No database, patient, clinician, or administrator seed account is included. Startup creates the required Identity roles after the database schema exists.
+```bash
+# 1. Point at a database. The application refuses to start without a connection string.
+export ConnectionStrings__DefaultConnection="Server=localhost;Database=CareAxis;Trusted_Connection=True;TrustServerCertificate=True"
 
-## Local development
+# 2. Run. In non-production the schema is created from the model if no migration files exist,
+#    then demo data is seeded.
+dotnet run --project HospitalManagement/HospitalManagement.csproj
+```
 
-1. Set a development connection string outside source control. For example, use .NET user-secrets or an environment variable:
+Create the first real administrator (no default account exists):
 
-   ```sh
-   export ConnectionStrings__DefaultConnection='Server=localhost;Database=CareAxisDev;User Id=...;Password=...;TrustServerCertificate=True'
-   ```
-
-   Replace the placeholder with a **local synthetic-data database** credential. Do not commit it.
-
-2. Restore dependencies, restore the local EF tool, apply the migrations to that disposable development database, then run the checks:
-
-   ```sh
-   dotnet tool restore
-   dotnet restore HospitalManagement.sln
-   dotnet ef database update --project DAL/Hospital.DAL.csproj --startup-project HospitalManagement/HospitalManagement.csproj --context HospitalDbContext
-   dotnet build HospitalManagement.sln --configuration Release --no-restore
-   dotnet test HospitalManagement.sln --configuration Release --no-build
-   ```
-
-3. Start the app locally:
-
-   ```sh
-   ASPNETCORE_ENVIRONMENT=Development dotnet run --project HospitalManagement/HospitalManagement.csproj --urls http://localhost:8080
-   ```
-
-   The application requires `ConnectionStrings__DefaultConnection` at startup. Do not enable SMTP or Google sign-in unless their provider settings are configured in a secret manager or environment.
-
-### One-time administrator bootstrap
-
-After applying migrations, provision the first administrator using a dedicated command. Supply the email, display name, and a strong unique password through your secret manager or process environment, then remove those temporary credentials immediately:
-
-```sh
-export BootstrapAdmin__Email='admin@example.invalid'
-export BootstrapAdmin__FirstName='CareAxis'
-export BootstrapAdmin__LastName='Administrator'
-export BootstrapAdmin__Password='use-a-unique-secret-from-your-secret-manager'
+```bash
 dotnet run --project HospitalManagement/HospitalManagement.csproj -- --bootstrap-admin
-unset BootstrapAdmin__Email BootstrapAdmin__FirstName BootstrapAdmin__LastName BootstrapAdmin__Password
 ```
 
-The bootstrap command creates an email-confirmed Identity account in the `Admin` role, refuses to alter an existing account, and exits without starting the web server. It never accepts a password as a command-line argument. Use a real, controlled email address for your organization, not the documentation placeholder.
+In **Production** the application will not create a schema from the model. Apply the pipeline's
+idempotent script first:
 
-## Configuration
-
-The application reads standard ASP.NET Core configuration. Environment-variable names use `__` for nested keys.
-
-| Setting | Required | Purpose |
-| --- | --- | --- |
-| `ConnectionStrings__DefaultConnection` | Yes | SQL Server used by Identity, application data, and Hangfire storage. |
-| `AllowedHosts` | Production | Explicit host allowlist. Production startup rejects an empty or wildcard value. |
-| `DataProtection__KeysPath` | Production | Persistent, access-controlled location for ASP.NET Core Data Protection keys. |
-| `ForwardedHeaders__KnownProxies__0` (and subsequent indices) | If behind a proxy | IP addresses of trusted reverse proxies. Forwarded headers are limited to one hop. |
-| `EmailOptions__Enabled` | No; defaults to `false` | Enable actual SMTP delivery. When enabled, sender, SMTP host, port, and provider credential are required. |
-| `EmailOptions__From` | When email enabled | SMTP sender/account. |
-| `EmailOptions__SmtpServer` | When email enabled | SMTP server hostname. |
-| `EmailOptions__Port` | When email enabled | SMTP port; the implementation requires STARTTLS. |
-| `EmailOptions__Password` | When email enabled | SMTP provider credential; supply through a secret manager. |
-| `Auth__Google__ClientID`, `Auth__Google__ClientSecret` | No | Both are required to register the optional Google sign-in provider. |
-
-`EmailOptions__Enabled=false` means messages are **not delivered**. The UI reports that notification delivery is unavailable rather than claiming that an email was sent. Queued email payloads are protected with ASP.NET Core Data Protection before they are stored by Hangfire.
-
-## Database and migration notes
-
-Migrations are located in `DAL/Migrations`. The latest migration adds appointment row-version concurrency, audit metadata, and composite query indexes. It was manually authored in this environment and has **not yet been validated by EF tooling or applied to a database**. Before a production release:
-
-1. Run the build and tests with the pinned SDK and package feeds available.
-2. Inspect EF's pending model changes and generate/compare the migration from the current model snapshot.
-3. Apply the migration to a disposable SQL Server database and test upgrade, rollback, and backup/restore procedures.
-4. Review data-retention, audit access, SQL permissions, concurrency behavior, and the legacy date/time assumptions.
-
-`HospitalDbContextFactory` lets EF tooling create the context without starting role seeding or the background-job server. It requires `ConnectionStrings__DefaultConnection` in the tool process environment.
-
-## Container deployment
-
-A multi-stage `Dockerfile` builds the web project on .NET 10 and runs it as a non-root user on port 8080. `compose.yaml` expects an **existing SQL Server** and uses persistent Docker volumes for the Data Protection key ring and profile images; it does not provision a database or embed credentials.
-
-```sh
-cp .env.example .env
-# Edit .env locally; provide the real database connection and exact public host allowlist.
-docker compose up --build
+```bash
+dotnet ef migrations script --idempotent \
+  --project DAL/Hospital.DAL.csproj \
+  --startup-project HospitalManagement/HospitalManagement.csproj \
+  --output careaxis-schema.sql
 ```
 
-The `.env` file is ignored by Git. Do not use the example values as production settings. For a one-time container bootstrap after applying migrations, export the four `BootstrapAdmin__...` variables as described above and run `docker compose run --rm -e BootstrapAdmin__Email -e BootstrapAdmin__FirstName -e BootstrapAdmin__LastName -e BootstrapAdmin__Password web --bootstrap-admin`, then unset them. This reuses the configured database and persistent key volume without starting the web server.
+## How authorisation works
 
-Terminate TLS at a trusted reverse proxy, configure its exact IP in `ForwardedHeaders:KnownProxies`, protect the key and upload volumes, and restrict network/database access. The sample port binding is loopback-only; if you change it for a different proxy topology, keep the web port private behind TLS. Never expose the app directly to the public internet over plain HTTP.
+Roles carry **permission claims**; controllers authorise on policies built from those permission
+names. A role is a bundle, not a hard-coded identity check, so privilege can change without editing
+controllers.
 
-## Security and operations boundary
+```csharp
+[Authorize(Policy = "perm:" + Permission.LabRelease)]
+public async Task<IActionResult> Transition(int id, LabOrderStatus target, ...)
+```
 
-The code includes Identity password/lockout settings, secure session and antiforgery cookies, automatic antiforgery validation, role checks, owner-scoped patient/clinician queries, selected rate limits, response security headers, `no-store` headers on authenticated routes, parameterized EF queries, profile-image validation, and minimal audit events. These are implementation controls, not proof of a complete threat model or a security certification.
+The grant map lives in one file — `Hospital.BLL/Permissions/RolePermissions.cs` — and the documented
+matrix in `docs/hospital-system/user-roles-permissions.md` is machine-verified against it.
 
-The repository does **not** provide production backups, tested restores, an alerting/monitoring service, managed secret storage, cloud profile-image storage, payment processing, incident response, a staffed support desk, a completed privacy notice, or jurisdiction-specific legal terms. Those remain the deployment operator's responsibility. Do not claim HIPAA, GDPR, or other regulatory compliance based only on these technical controls.
+### Safety properties that are enforced, not merely intended
 
-Public pages use generic CSS illustrations and synthetic UI examples. No real patient records are bundled or seeded. Profile-image storage is local to the app container unless the deployment supplies persistent storage; a managed object-storage integration is not implemented.
+| Property | How |
+|---|---|
+| A clinician cannot be double-booked | Overlap rules + filtered unique index `UX_Appointments_DoctorSlot` |
+| A bed cannot hold two patients | Filtered unique index `UX_BedAssignments_ActiveOccupancy` |
+| An unverified laboratory result is never "final" | `LabRules.IsClinicallyFinal`; the transition graph cannot skip verification |
+| A signed clinical record cannot be edited | `EncounterRules.IsEditable`; corrections become amendments with their own identity |
+| Nobody approves their own refund | `ApproveRefundAsync` rejects the recording officer |
+| Front desk cannot author clinical content | Receipt/permission separation, asserted in tests |
 
-## CI
+## Documentation
 
-The GitHub Actions workflow in `.github/workflows/ci.yml` restores, builds, and runs the unit tests on .NET 10. It does not connect to a database, apply migrations, or certify deployment security.
+All in [`docs/hospital-system/`](docs/hospital-system):
+
+| Document | Contents |
+|---|---|
+| `current-system-audit.md` | What the original system did, with evidence |
+| `module-inventory.md` | Every capability: original state, decision, **delivered state** |
+| `technical-architecture.md` | As-is and target architecture |
+| `improvement-roadmap.md` | The ten phases and their gates |
+| `user-roles-permissions.md` | Roles, 44 permissions, verified grant matrix, segregation of duties |
+| `workflow-mapping.md` | Every clinical and financial workflow with its state machine |
+| `design-system.md` | Tokens, components, breakpoints, RTL, accessibility intent |
+| `data-architecture.md` | Entities, invariants, lifecycle, concurrency, classification |
+| `reporting-specification.md` | All 18 reports and the shared contract |
+| `patient-examination-report.md` | Draft / reviewed / signed / finalized and what each permits |
+| `security-privacy-review.md` | Control inventory, ASVS 5.0 mapping, risk register |
+| `healthcare-standards-mapping.md` | FHIR R5 alignment and the explicit non-conformance position |
+| `test-plan.md` | Test strategy, inventory, defects found, what was **not** run |
+| `commercial-readiness-assessment.md` | Implemented vs demo vs backend-required vs legal review |
+
+Toolchain artefacts are in [`toolkit-output/`](toolkit-output).
+
+## Testing
+
+```bash
+dotnet test HospitalManagement.sln --configuration Release
+```
+
+CI runs restore → build → test on every push, then generates the EF migration and an idempotent SQL
+script as a build artifact. Failed tests are surfaced as build annotations with their assertion
+messages.
+
+## Security posture in one paragraph
+
+HTTPS with HSTS, a strict `script-src 'self'` Content-Security-Policy backed by the absence of any
+inline script (enforced by a test), `nosniff`/`DENY`/`no-referrer` headers, global anti-forgery
+validation, per-IP rate limiting on authentication, signature-checked uploads stored outside the web
+root, `no-store` on every clinical surface, and an append-only audit trail of who did what.
+**Missing and required before real data:** multi-factor authentication, encryption at rest, tested
+backups, retention and erasure workflows, tenant isolation, and an independent penetration test.
+
+## Licence and status
+
+Internal hospital software, developed as a transformation of the existing repository. The design,
+workflows and every documented property are traceable to code; where something is not built, the
+documentation says so explicitly rather than describing it as complete.

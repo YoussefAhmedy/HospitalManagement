@@ -16,15 +16,15 @@ tenancy, and regulatory review rather than by application features.
 | Measure | Before | After |
 |---|---|---|
 | Controllers | 5 | 16 |
-| Razor views | 26 | 73 |
-| Action methods | ~40 | 120 |
+| Razor views | 44 | 73 |
+| Action methods | 65 | 120 |
 | Roles | 3 | 14 (11 operational + 3 legacy) |
 | Permissions | 0 (role strings) | 43, enforced as policies |
-| Domain entities | 8 | 36 entity classes |
+| Domain entities | 9 | 36 entity classes |
 | Reports | 0 | 18 |
 | Automated tests | 5 | 70 |
 | Design system | ad-hoc CSS | token-based system + RTL |
-| Audit events | ad-hoc | 30+ named event types |
+| Audit events | ad-hoc | 57 named event types across 16 domains |
 
 ---
 

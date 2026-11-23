@@ -14,17 +14,18 @@ section states the exact run of record.
 
 | | Before | After |
 |---|---|---|
-| Commits on this branch | — | 39 |
-| Files changed | — | 210 (+16,900 / −4,805) |
+| Commits on this branch | — | 53 |
+| Files changed | — | 212 (+17,772 / −4,805) |
 | Controllers | 5 | 16 (11 new) |
-| Razor views | 26 | 73 |
-| Action methods | ~40 | 120 |
+| Razor views | 44 | 73 |
+| Action methods | 65 | 120 |
 | Roles | 3 | 14 (11 operational + 3 legacy) |
 | Permissions in the catalogue | 0 | 43 (39 enforced, 4 reserved) |
-| Domain entities | 8 | 36 |
+| Domain entities | 9 | 36 |
 | Reports | 0 | 18 |
+| Audit event types | 0 | 57 |
 | Automated tests | 5 | 70 |
-| Documentation | 3 files | 16 documents |
+| Documentation | 3 files | 16 documents in `docs/hospital-system` + README |
 
 The result is a hospital platform where a receptionist books a slot a clinician cannot be
 double-booked into, a nurse triages, a clinician documents and signs a record that then refuses

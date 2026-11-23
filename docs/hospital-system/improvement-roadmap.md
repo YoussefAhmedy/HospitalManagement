@@ -39,14 +39,31 @@ Sequenced, dependency-aware, with explicit verification gates. Phases follow the
 - **Gate:** documented WCAG 2.2 AA checklist with per-item evidence or explicit gap.
 
 ## Phase 9 — Quality assurance
-- **Delivered:** 69 unit tests across nine suites (slot conflicts, bed occupancy, laboratory release gate, billing ledger, encounter lifecycle, RBAC boundaries, localisation completeness, static view hygiene). Recorded in `test-plan.md` with the run of record.
-- **Regression-hunting tooling:** CI now converts failed tests into annotated build errors, so a red build is diagnosable from the API without downloading logs. Twelve defects were found this way and fixed.
+- **Delivered:** 69 unit tests across nine suites (slot conflicts, bed occupancy, laboratory release gate, billing ledger, encounter lifecycle, RBAC boundaries, localisation completeness, static view hygiene, authorisation coverage). Recorded in `test-plan.md` with the run of record.
+- **Regression-hunting tooling:** CI now converts failed tests into annotated build errors, so a red build is diagnosable from the API without downloading logs. Sixteen defects were found this way and fixed, plus two more while reconciling documentation against code.
 - **Grant-matrix verification:** the documented permission matrix is machine-compared against the seeded role map (384 cells, 0 mismatches), closing the gap where documentation silently drifts from code.
 - **Not executed:** Playwright/E2E, visual regression, axe accessibility automation, database integration, load tests, penetration test. Each is listed with its blocking prerequisite in `test-plan.md` §7, and the E2E scenarios are specified in §8 so the suite can be built without further design work.
 - **Gate:** CI test summary recorded verbatim. 
 
-## Phase 10 — Commercial readiness review
+## Phase 10 — Commercial readiness review ✅
+
 - `commercial-readiness-assessment.md`: implemented vs simulated vs requiring certification, with deployment, privacy, interoperability and legal gaps enumerated.
+- **Delivered:** the five-way classification (fully implemented / demonstration-only / backend-required /
+  external integration / legal review), the per-hospital versus multi-tenant decision with its reason
+  and the cost of being wrong, readiness scoring per dimension, and a sequenced path to production.
+- **Supporting deliverables also produced:**
+  - `patient-examination-report.md` — draft/reviewed/signed/finalized, with the note-level and
+    encounter-level state machines and an explicit statement that no signed PDF artefact exists.
+  - `project-examination-report.md` — a reviewer's assessment including the weaknesses, not only the
+    achievements.
+  - `final-report.md` — the closing report, the verification record and the verdict.
+  - `reporting-specification.md` — the 18-report catalogue and shared contract.
+  - `healthcare-standards-mapping.md` — FHIR R5 alignment and an explicit non-conformance position.
+- **Work surfaced by this phase and fixed rather than documented around:** the patient chart selected a
+  patient's invoices by surname substring (a cross-patient disclosure); the demonstration password was
+  a hard-coded constant presented as if it were a secret; four permissions were documented as controls
+  while gating nothing.
+- **Gate:** every claim in the assessment is traceable to a file, a test or an explicit gap statement.
 
 ## Delivery constraints of this execution environment (disclosed up front)
 | Constraint | Consequence |

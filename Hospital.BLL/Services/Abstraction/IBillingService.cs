@@ -43,7 +43,7 @@ public interface IBillingService
     /// search, because a name search cannot distinguish two patients who share a surname.
     /// </summary>
     Task<PagedResult<InvoiceListItem>> ForPatientAsync(
-        int patientId, int page, int pageSize, CancellationToken cancellationToken = default);
+        string patientId, int page, int pageSize, CancellationToken cancellationToken = default);
 
     Task<RevenueSummary> RevenueAsync(CancellationToken cancellationToken = default);
 }

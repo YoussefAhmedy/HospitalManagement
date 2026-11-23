@@ -190,7 +190,7 @@ public sealed class BillingService(
             .FirstOrDefaultAsync(i => i.Id == invoiceId, cancellationToken);
 
     public async Task<PagedResult<InvoiceListItem>> ForPatientAsync(
-        int patientId, int page, int pageSize, CancellationToken cancellationToken = default)
+        string patientId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         // Filter on the foreign key, never on a name. Two patients may share a surname; a name
         // search would then disclose one patient's financial record to the other.

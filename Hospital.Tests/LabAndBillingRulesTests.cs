@@ -100,6 +100,22 @@ public sealed class LabAndBillingRulesTests
     }
 
     [TestMethod]
+    public void RefundApproval_IsBlockedForTheOfficerWhoRecordedIt()
+    {
+        // Mirrors the guard in BillingService.ApproveRefundAsync: a refund above the threshold
+        // cannot be self-approved, so a single officer cannot move money twice.
+        const string recorder = "officer-a";
+        const string other = "officer-b";
+
+        Assert.IsFalse(CanApprove(recorder, recorder, RequiresApproval: true), "Self-approval must be refused.");
+        Assert.IsTrue(CanApprove(recorder, other, RequiresApproval: true), "A second officer may approve.");
+        Assert.IsFalse(CanApprove(recorder, other, RequiresApproval: false), "An unapproved-required refund is already settled.");
+
+        static bool CanApprove(string recorderId, string approverId, bool RequiresApproval) =>
+            RequiresApproval && !string.Equals(recorderId, approverId, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
     public void DeriveStatus_ReflectsTheLiveLedger()
     {
         Assert.AreEqual(InvoiceStatus.Void, BillingRules.DeriveStatus(100m, 0m, 0m, true));

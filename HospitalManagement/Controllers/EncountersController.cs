@@ -108,7 +108,7 @@ public sealed class EncountersController(
     public async Task<IActionResult> AddNote(int id, string content, int? amendsNoteId, CancellationToken cancellationToken)
     {
         var result = await encounters.AddNoteAsync(id, content, CurrentUserId(), User.FindFirstValue(ClaimTypes.Role), amendsNoteId, cancellationToken);
-        await Flash(result.As(r => (object?)r), "encounter.note.add", id.ToString(), "Clinical note saved as a draft.");
+        await Flash(result.As(), "encounter.note.add", id.ToString(), "Clinical note saved as a draft.");
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -128,7 +128,7 @@ public sealed class EncountersController(
     public async Task<IActionResult> AddDiagnosis(int id, string description, string? code, DiagnosisType type, CancellationToken cancellationToken)
     {
         var result = await encounters.AddDiagnosisAsync(id, description, type, code, CurrentUserId(), cancellationToken);
-        await Flash(result.As(r => (object?)r), "encounter.diagnosis.add", id.ToString(), "Diagnosis recorded.");
+        await Flash(result.As(), "encounter.diagnosis.add", id.ToString(), "Diagnosis recorded.");
         return RedirectToAction(nameof(Details), new { id });
     }
 
